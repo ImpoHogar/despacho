@@ -1286,7 +1286,7 @@ function render(){
   const porFact=Object.values(S.cierres).filter(c=>c.estado==="por_facturar").length;
   $("#t-facturar").innerHTML="Facturación"+(porFact?`<span class="count">${porFact}</span>`:"");
   const porCont=cargasPend().filter(c=>!cargaOk(c)).length;
-  $("#t-carga").innerHTML="Carga"+(porCont?`<span class="count">${porCont}</span>`:"");
+  $("#t-carga").innerHTML="Ruteros"+(porCont?`<span class="count">${porCont}</span>`:"");
   const nka=kaPendientes();$("#t-contab").innerHTML="Contabilidad"+(nka?`<span class="count">${nka}</span>`:"");
   const nb=enBodega().length;
   const npa=enBodega().filter(o=>!listo(o)).length;
@@ -4392,7 +4392,7 @@ function alertas(){
     if(cj>cap)A.push({k:"cap",nivel:"bad",t:`${r.nombre}: ${cj} cajas y el camión lleva ${cap}`,d:`Sobran ${cj-cap} cajas: pase pedidos a otra ruta o a Pendientes.`,ir:"rutas",btn:"Ver tablero"})}
   
   const sinR=cargasPend().filter(c=>!ruteroDe(c));
-  if(sinR.length)A.push({k:"rutero",nivel:"bad",t:`${sinR.length} ruta${sinR.length==1?"":"s"} cerrada${sinR.length==1?"":"s"} sin rutero`,d:`${lista(sinR,c=>c.rutaNombre)}. Nadie puede contar esa carga hasta asignarle el rutero.`,ir:"carga",btn:"Asignar en Carga"});
+  if(sinR.length)A.push({k:"rutero",nivel:"bad",t:`${sinR.length} ruta${sinR.length==1?"":"s"} cerrada${sinR.length==1?"":"s"} sin rutero`,d:`${lista(sinR,c=>c.rutaNombre)}. Nadie puede contar esa carga hasta asignarle el rutero.`,ir:"carga",btn:"Asignar en Ruteros"});
   
   const ret=Object.values(S.clientes).filter(c=>c.retenido).map(c=>({c,n:bod.filter(o=>o.clienteId===c.id||norm(o.cliente)===norm(c.nombre)).length})).filter(x=>x.n);
   if(ret.length)A.push({k:"ret",nivel:"warn",t:`${ret.length} cliente${ret.length==1?"":"s"} retenido${ret.length==1?"":"s"} con pedidos en bodega`,d:lista(ret,x=>`${sinEj(x.c.nombre)} (${x.n})${x.c.retenido.auto?" · mora":""}`),ir:"contab",btn:"Ver en Contabilidad",fn:"retenidos"});
@@ -4401,7 +4401,7 @@ function alertas(){
   if(viejos.length)A.push({k:"viejos",nivel:"warn",t:`${viejos.length} pedido${viejos.length==1?"":"s"} con ${dias} días o más en bodega`,d:lista(viejos,o=>`${sinEj(o.cliente)} · ${o.ubic||""} · ${Math.floor((ahora-o.recibido)/864e5)} d`),ir:"rutas",btn:"Ver tablero"});
   
   const sinContar=cargasPend().filter(c=>!cargaOk(c)&&ruteroDe(c)&&ahora-(c.fecha||ahora)>2*36e5);
-  if(sinContar.length)A.push({k:"carga",nivel:"warn",t:`${sinContar.length} carga${sinContar.length==1?"":"s"} sin contar hace más de 2 horas`,d:lista(sinContar,c=>`${c.rutaNombre} · ${sinEj(nombreRutero(c))}`),ir:"carga",btn:"Ver Carga"});
+  if(sinContar.length)A.push({k:"carga",nivel:"warn",t:`${sinContar.length} carga${sinContar.length==1?"":"s"} sin contar hace más de 2 horas`,d:lista(sinContar,c=>`${c.rutaNombre} · ${sinEj(nombreRutero(c))}`),ir:"carga",btn:"Ver Ruteros"});
   
   const viejasCalle=porLiquidar().filter(c=>(c.salida||c.fecha||ahora)<hoy0());
   if(viejasCalle.length)A.push({k:"liq",nivel:"warn",t:`${viejasCalle.length} ruta${viejasCalle.length==1?"":"s"} de días anteriores sin cerrar con el chofer`,d:lista(viejasCalle,c=>`${c.rutaNombre} · ${fmtFecha(c.salida||c.fecha)}`),ir:"contab",btn:"Ir a Contabilidad"});
@@ -6716,7 +6716,7 @@ $("#demo-on").addEventListener("click",async()=>{
         facturadas:Object.fromEntries(its.map(i=>[i.id,true])),totalBultos:its.reduce((s,i)=>s+i.bultos,0),ejemplo:true,carga:{ok:true,intentos:1,por:"Ejemplo · Chofer Pedro",ts:now-6*36e5},fondo:20000});
     }
     if(!pista&&S.usuarios["u_ej_chofer"])pista=S.usuarios["u_ej_chofer"].pista||"";
-    toast("Ejemplo cargado. En Rutas hay pedidos para armar. El chofer de ejemplo"+(pista?` (clave ${pista})`:"")+" ve su ruta en Carga, y Contabilidad la cierra con él.");
+    toast("Ejemplo cargado. En Rutas hay pedidos para armar. El chofer de ejemplo"+(pista?` (clave ${pista})`:"")+" ve su ruta en Ruteros, y Contabilidad la cierra con él.");
 
   }catch(x){fail(x)}
 });
