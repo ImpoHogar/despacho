@@ -661,7 +661,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
       <button class="tab" role="tab" data-tab="hoy" id="t-hoy">Hoy</button>
       <button class="tab" role="tab" data-tab="recibir" id="t-recibir">Recibir</button>
       <button class="tab" role="tab" data-tab="rutas" id="t-rutas">Rutas</button>
-      <button class="tab" role="tab" data-tab="carga" id="t-carga">Carga</button>
+      <button class="tab" role="tab" data-tab="carga" id="t-carga">Ruteros</button>
       <button class="tab" role="tab" data-tab="facturar" id="t-facturar">Facturación</button>
       <button class="tab" role="tab" data-tab="contab" id="t-contab">Contabilidad</button>
       <button class="tab" role="tab" data-tab="gps" id="t-gps">GPS</button>
@@ -936,7 +936,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
       <div style="display:grid;gap:20px">
         <div class="panel" id="p-rutas" style="display:grid;gap:12px">
           <h2 style="font-size:24px">Rutas y estantes</h2>
-          <div class="note"><b>Nombre:</b> como le dicen a la ruta (ej. «Ruta 1 · Cartago»). <b>Estante:</b> letra del estante donde se acomoda esa ruta (A-01, A-02…). <b>Posiciones:</b> cuántos espacios tiene ese estante; si se llena, el sistema manda a la zona Z. <b>Cajas camión:</b> lo que le cabe al camión. <b>Rutero:</b> quien cuenta y lleva esa ruta; al entrar con su clave le aparece su ruta en «Carga». La ruta <b>Entrega en bodega</b> es para clientes que pasan a retirar: no usa camión.</div>
+          <div class="note"><b>Nombre:</b> como le dicen a la ruta (ej. «Ruta 1 · Cartago»). <b>Estante:</b> letra del estante donde se acomoda esa ruta (A-01, A-02…). <b>Posiciones:</b> cuántos espacios tiene ese estante; si se llena, el sistema manda a la zona Z. <b>Cajas camión:</b> lo que le cabe al camión. <b>Rutero:</b> quien cuenta y lleva esa ruta; al entrar con su clave le aparece su ruta en «Ruteros». La ruta <b>Entrega en bodega</b> es para clientes que pasan a retirar: no usa camión.</div>
           <div class="rutarow note" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em"><span></span><span>Nombre</span><span>Estante</span><span>Posiciones</span><span>Cajas camión</span><span>Rutero</span></div>
           <div id="aj-rutas" style="display:grid;gap:8px"></div>
           <div><button class="btn dark" id="aj-saverutas">Guardar rutas</button></div>
@@ -1150,7 +1150,7 @@ if(!["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"].inc
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
 const ROLES={jefe:["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"],facturacion:["recibir","facturar","estacion"],ventas:["recibir","rutas","estacion"],contabilidad:["recibir","rutas","estacion"]};
 const ROL_NOMBRE={jefe:"Jefe",facturacion:"Facturación",ventas:"Ventas",contabilidad:"Contabilidad"};
-const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",aprobar:"Aprobaciones",rutas:"Rutas",carga:"Carga",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
+const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",aprobar:"Aprobaciones",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
 let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
   {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},
