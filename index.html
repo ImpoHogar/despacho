@@ -652,6 +652,15 @@ html:has(.kliq),.kliq{overflow-anchor:none}
 .gps-ruta{color:var(--ink);font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;box-shadow:var(--shadow);z-index:200;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,10px);opacity:0}}}
+.al-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-top:14px;align-items:start}
+.al-chip.viejo{opacity:.5;border-style:dashed}
+.al-card{background:var(--card,#fff);border:1px solid var(--line);border-left:7px solid #94a3b8;border-radius:12px;padding:14px}
+.al-card.rojo{border-left-color:#e03131;background:#fff5f5}.al-card.amar{border-left-color:#f59f00}.al-card.gris{border-left-color:#94a3b8}
+.al-hd{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}.al-hd h3{margin:0;font-size:20px}
+.al-badge{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:999px;white-space:nowrap;border:1px solid}
+.al-badge.rojo{color:#c92a2a;border-color:#ffa8a8;background:#fff}.al-badge.amar{color:#a35d00;border-color:#ffd8a8;background:#fff9db}.al-badge.gris{color:#495057;border-color:#ced4da;background:#f1f3f5}
+.al-chips{display:flex;flex-wrap:wrap;gap:8px}.al-chip{font:700 20px/1 ui-monospace,Menlo,Consolas,monospace;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;display:inline-flex;gap:7px;align-items:center}
+.al-card.rojo .al-chip{border-color:#ffc9c9}.al-dep{font:800 11px/1 system-ui;color:#fff;border-radius:5px;padding:3px 5px}.al-dep.p{background:#d6336c}.al-dep.b{background:#1c7ed6}
 .rx-ia{margin-top:6px;font-size:14px;min-height:1px}.rx-ia .ia-ok{color:var(--ok,#1a7f37);font-weight:600}.rx-ia .btn{margin:4px 4px 0 0}
 </style>
 
@@ -661,6 +670,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
     <nav class="tabs" role="tablist" aria-label="Puestos">
       <button class="tab" role="tab" data-tab="hoy" id="t-hoy">Hoy</button>
       <button class="tab" role="tab" data-tab="recibir" id="t-recibir">Recibir</button>
+      <button class="tab" role="tab" data-tab="alisto" id="t-alisto">Alisto</button>
       <button class="tab" role="tab" data-tab="aprobar" id="t-aprobar">Ventas</button>
       <button class="tab" role="tab" data-tab="rutas" id="t-rutas">Rutas</button>
       <button class="tab" role="tab" data-tab="carga" id="t-carga">Ruteros</button>
@@ -707,6 +717,13 @@ html:has(.kliq),.kliq{overflow-anchor:none}
   </section>
 
   <!-- RECIBIR -->
+  <section data-view="alisto" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><h2 style="font-size:30px">Alisto — prioridad del momento</h2>
+      <div class="note">Solo proformas en «Proformado» de Bodega (B) y Perfumería (P). Cuando una pasa a «En Alisto» desaparece sola. Rojo: alistar ya · Amarillo: sale hoy más tarde · Gris: sale otro día.</div></div>
+      <div class="note" id="al-estado"></div></div>
+    <div id="al-sab"></div>
+    <div class="al-grid" id="al-grid"></div>
+  </section>
   <section data-view="recibir" hidden>
     <div class="rx">
       <div class="panel">
@@ -1150,13 +1167,13 @@ function siguienteUbic(letra){
 let tab=(location.hash||"").slice(1)||lsGet("despacho.tab")||"recibir";
 if(!["recibir","estacion"].includes(tab))tab="recibir";
 if(!["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"].includes(tab))tab="recibir";
-window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
+window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","alisto","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
 const ROLES={jefe:["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"],facturacion:["recibir","facturar","estacion"],ventas:["recibir","rutas","estacion"],contabilidad:["recibir","rutas","estacion"]};
 const ROL_NOMBRE={jefe:"Jefe",facturacion:"Facturación",ventas:"Ventas",contabilidad:"Contabilidad"};
-const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
+const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",alisto:"Alisto",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
 let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
-  {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},
+  {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},{g:"Alisto",k:"alisto",t:"Ver prioridades de Alisto"},
   {g:"Rutas",k:"rutas",t:"Ver tablero"},{g:"Rutas",k:"mover",t:"Mover pedidos"},{g:"Rutas",k:"cerrar",t:"Cerrar rutas"},{g:"Rutas",k:"entregar",t:"Entrega en bodega"},{g:"Rutas",k:"cargar",t:"Contar carga (rutero)"},
   {g:"Aprobaciones",k:"aprobarV",t:"Autorizar Ventas (V)"},{g:"Aprobaciones",k:"aprobarC",t:"Autorizar Contab. (C)"},
   {g:"Facturación",k:"facturar",t:"Facturar y salida"},{g:"Contabilidad",k:"liquidar",t:"Cerrar rutas con chofer"},
@@ -1170,11 +1187,11 @@ const personaPorClave=k=>{k=String(k||"").trim();return k&&!gas?personas().find(
 const tiene=(x,perm)=>!!(x&&permisosDe(x)[perm]);
 const yo=perm=>!!(sesion&&sesion.permisos&&sesion.permisos[perm]);
 const usPorClave=k=>personaPorClave(k);
-const TAB_PERM={gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],ajustes:["ajustes"]};
+const TAB_PERM={alisto:["alisto"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],ajustes:["ajustes"]};
 const permitido=t=>gas?gasPermitido(t):localPermitido(t);
 const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar"],estacion:["registrar"]};
 function gasPermitido(t){if(!sesion)return false;if(yo("ajustes"))return true;return ((GAS_TAB[t]||TAB_PERM[t])||[]).some(yo)}
-const TAB_ORDEN=["hoy","recibir","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes"];
+const TAB_ORDEN=["hoy","recibir","alisto","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes"];
 const primeraTab=()=>TAB_ORDEN.find(permitido)||"recibir";
 const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","aprobarC","liquidar","entregar","devoluciones"].some(yo);
 const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":"Usuario";
@@ -1310,6 +1327,7 @@ function render(){
   revisarTareas();
   {const th=$("#t-hoy");if(th){const na=sesion&&permitido("hoy")?alertas().length:0;th.innerHTML="Hoy"+(na?`<span class="count" style="background:var(--bad)">${na}</span>`:"")}}
   if(tab==="aprobar")renderAprobar();
+  if(tab==="alisto")renderAlisto();
   renderSetup();
   if(tab==="estacion")renderEstacion();
   renderPrn();
@@ -1366,7 +1384,7 @@ async function iaRefrescar(force){
   if(!force&&Date.now()-IA.t<50000)return;
   IA.cargando=true;
   try{const r=await gcall("apiInteraIndice",gasToken,gasActor);
-    if(r&&r.ok&&r.ts){const m={};(r.p||[]).forEach(x=>{const k=String(x.n);(m[k]=m[k]||[]).push(x)});IA.p=m;IA.ts=r.ts;IA.t=Date.now();IA.off=false;if(tab==="recibir")iaAplicar()}
+    if(r&&r.ok&&r.ts){const m={};(r.p||[]).forEach(x=>{const k=String(x.n);(m[k]=m[k]||[]).push(x)});IA.p=m;IA.ts=r.ts;IA.t=Date.now();IA.off=false;if(tab==="recibir")iaAplicar();if(tab==="alisto")renderAlisto()}
     else{IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}}
   catch(e){IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}finally{IA.cargando=false}}
 const iaCod=x=>x.d==="P"?"P"+x.c:String(x.c);
@@ -1396,6 +1414,57 @@ function iaAplicar(elegido){
 $("#rx-prof").addEventListener("input",()=>{clearTimeout(rxIaT);rxIaT=setTimeout(()=>iaAplicar(),180)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ia-dep]");if(b)iaAplicar(b.dataset.iaDep)});
 setInterval(()=>{if(tab==="recibir")iaRefrescar()},15000);
+/* ---------- Alisto: prioridades por hora de salida de cada ruta ---------- */
+const alHoy=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
+const AL_DN=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const alHM=m=>{m=((m%1440)+1440)%1440;const h=Math.floor(m/60),mm=m%60;return (h%12||12)+":"+pad(mm)+(h<12?" a. m.":" p. m.")};
+const alMin=t=>{const p=String(t||"08:00").split(":");return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0)};
+function alNoSale(){try{const d=JSON.parse(lsGet("despacho.alisto.nosale")||"{}");return d.f===alHoy()?d.r||[]:[]}catch(e){return []}}
+function alProxima(r,ahora){
+  const sl=r.sale;if(!sl||!Array.isArray(sl.dias)||!sl.dias.length)return null;
+  const d0=new Date(ahora),min=d0.getHours()*60+d0.getMinutes(),dia=d0.getDay(),h=alMin(sl.h),ns=alNoSale();
+  for(let k=0;k<8;k++){const d=(dia+k)%7;const diasR=sl.dias.concat(sl.sab?[6]:[]);
+    if(!diasR.includes(d))continue;if(k===0&&d===6&&sl.sab&&ns.includes(r.id))continue;
+    const f=k*1440+h-min;if(f>=0)return {falta:f,k,d,sab:d===6&&!!sl.sab}}
+  return null}
+function renderAlisto(){
+  const grid=$("#al-grid");if(!grid)return;
+  iaRefrescar();
+  const est=$("#al-estado");
+  if(!gas){grid.innerHTML=`<div class="panel note">El panel de Alisto funciona en la versión en línea, conectada con Interakzion.</div>`;est.textContent="";return}
+  if(!IA.t){grid.innerHTML=`<div class="panel note">Leyendo Interakzion…</div>`;return}
+  if(IA.off){grid.innerHTML=`<div class="panel note">Todavía no llegan datos de Interakzion. Revise que la computadora del enlace esté encendida.</div>`;return}
+  const viejo=Date.now()-IA.ts>5*60000;
+  est.innerHTML=(viejo?`<b style="color:var(--bad)">Interakzion sin actualizar desde ${fmtHora(IA.ts)}</b> · revise la computadora del enlace`:`Interakzion actualizado ${fmtHora(IA.ts)} · cada minuto`);
+  const ahora=Date.now(),grupos={};
+  const lim=(d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()))(new Date(ahora-7*864e5));
+  const fFmt=f=>f?f.slice(6,8)+"/"+f.slice(4,6)+"/"+f.slice(0,4):"";
+  const porCod={};Object.values(S.clientes).forEach(c=>{if(c.codigo)porCod[String(c.codigo)]=c});
+  Object.values(IA.p).flat().filter(x=>x.e==="Proformado").forEach(x=>{
+    const cl=porCod[iaCod(x)],r=cl&&rutaById(cl.ruta);const k=r?r.id:"_";
+    (grupos[k]=grupos[k]||[]).push(x)});
+  const items=Object.keys(grupos).map(k=>{const r=k==="_"?null:rutaById(k);
+    const retiro=!!(r&&r.tipo==="bodega"),px=r&&!retiro?alProxima(r,ahora):null;
+    return {k,r,retiro,px,pf:grupos[k].map(x=>({...x,viejo:!!x.f&&x.f<lim})).sort((a,b)=>(a.viejo-b.viejo)||String(a.n).localeCompare(String(b.n),"es",{numeric:true}))}});
+  const conHora=items.filter(i=>i.px);const min=conHora.length?Math.min(...conHora.map(i=>i.px.falta)):null;
+  items.forEach(i=>{
+    if(i.retiro){i.cls="rojo";i.badge="Prioridad siempre";i.txt="Retiran en bodega: pueden llegar en cualquier momento";i.ord=-1}
+    else if(!i.r){i.cls="gris";i.badge="Sin ruta";i.txt="Clientes sin ruta asignada (Ajustes → Clientes)";i.ord=1e9+1}
+    else if(!i.px){i.cls="gris";i.badge="Sin día fijo";i.txt="Se alista cuando se programe la salida";i.ord=1e9}
+    else{const p=i.px,hr=Math.floor(p.falta/60),mn=p.falta%60,h=alMin(i.r.sale.h);
+      i.cls=p.falta===min?"rojo":p.k===0?"amar":"gris";i.badge=p.falta===min?"Alistar ya":p.k===0?"Hoy más tarde":p.k===1?"Mañana":AL_DN[p.d];
+      i.txt="Sale "+(p.k===0?"hoy "+alHM(h)+" · en "+(hr?hr+" h ":"")+mn+" min":(p.k===1?"mañana ":AL_DN[p.d]+" ")+alHM(h))+(p.sab?" · sábado: solo si sale":"");i.ord=p.falta}});
+  items.sort((a,b)=>a.ord-b.ord);
+  grid.innerHTML=items.length?items.map(i=>`<article class="al-card ${i.cls}"><div class="al-hd"><div><h3>${esc(i.r?i.r.nombre:"Sin ruta asignada")}</h3><div class="note">${esc(i.txt)}</div></div><span class="al-badge ${i.cls}">${esc(i.badge)}</span></div>
+    ${i.pf.some(x=>x.viejo)?`<div class="note" style="margin:-4px 0 8px">${i.pf.filter(x=>x.viejo).length} con más de 7 días (borde punteado, al final)</div>`:""}<div class="al-chips">${i.pf.map(x=>`<span class="al-chip${x.viejo?" viejo":""}" title="${esc(x.nm)} · proformado el ${fFmt(x.f)}${x.viejo?" (más de 7 días)":""}">${esc(x.n)}<b class="al-dep ${x.d==="P"?"p":"b"}">${x.d}</b></span>`).join("")}</div></article>`).join("")
+    :`<div class="panel empty">No hay proformas en «Proformado» en este momento.</div>`;
+  const sab=$("#al-sab"),hoy=new Date(ahora);
+  if(hoy.getDay()===6){const rs=S.rutas.filter(r=>r.sale&&r.sale.sab),ns=alNoSale();
+    sab.innerHTML=rs.length?`<div class="panel note" style="margin:10px 0">Sábado: marque las rutas que <b>no</b> salen hoy. ${rs.map(r=>`<label style="margin-right:12px"><input type="checkbox" data-al-ns="${r.id}" ${ns.includes(r.id)?"checked":""}> ${esc(r.nombre)}</label>`).join("")}</div>`:""}
+  else sab.innerHTML="";
+}
+document.addEventListener("change",e=>{const c=e.target.closest("[data-al-ns]");if(!c)return;const ns=new Set(alNoSale());c.checked?ns.add(c.dataset.alNs):ns.delete(c.dataset.alNs);lsSet("despacho.alisto.nosale",JSON.stringify({f:alHoy(),r:[...ns]}));renderAlisto()});
+setInterval(()=>{if(tab==="alisto"){iaRefrescar();renderAlisto()}},20000);
 
 $("#rxform").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -3203,7 +3272,7 @@ async function descargarFormato(){
 document.addEventListener("click",e=>{if(e.target.closest("[data-formato]")){e.preventDefault();descargarFormato()}});
 
  
-const TAB_LOCAL={hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
+const TAB_LOCAL={alisto:["alisto"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
   facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],ajustes:["ajustes"],estacion:["registrar"]};
 function localPermitido(t){
   if(t==="estacion"&&!standalone&&!sesion)return true;   
@@ -6515,7 +6584,7 @@ function renderAjustes(){
 }
 $("#aj-rutas").addEventListener("input",()=>rutasDirty=true);
 $("#aj-saverutas").addEventListener("click",async()=>{
-  const rutas=S.rutas.map(r=>({id:r.id,tipo:r.tipo||"camion",nombre:($("#rn-"+r.id).value.trim()||r.nombre),estante:($("#re-"+r.id).value.trim().toUpperCase()||r.estante),capacidad:Math.max(1,parseInt($("#rc-"+r.id).value)||r.capacidad),posiciones:Math.max(1,parseInt($("#rp-"+r.id).value)||r.posiciones||30),ruteroId:($("#rr-"+r.id)?$("#rr-"+r.id).value:(r.ruteroId||""))||""}));
+  const rutas=S.rutas.map(r=>({...r,id:r.id,tipo:r.tipo||"camion",nombre:($("#rn-"+r.id).value.trim()||r.nombre),estante:($("#re-"+r.id).value.trim().toUpperCase()||r.estante),capacidad:Math.max(1,parseInt($("#rc-"+r.id).value)||r.capacidad),posiciones:Math.max(1,parseInt($("#rp-"+r.id).value)||r.posiciones||30),ruteroId:($("#rr-"+r.id)?$("#rr-"+r.id).value:(r.ruteroId||""))||""}));
   const letras=rutas.map(r=>r.estante);if(new Set(letras).size!==letras.length){toast("Dos rutas no pueden usar la misma letra de estante");return}
   try{await saveRutas(rutas);rutasDirty=false;toast("Rutas guardadas");render()}catch(x){fail(x)}
 });
