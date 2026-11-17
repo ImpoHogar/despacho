@@ -660,6 +660,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
     <nav class="tabs" role="tablist" aria-label="Puestos">
       <button class="tab" role="tab" data-tab="hoy" id="t-hoy">Hoy</button>
       <button class="tab" role="tab" data-tab="recibir" id="t-recibir">Recibir</button>
+      <button class="tab" role="tab" data-tab="aprobar" id="t-aprobar">Ventas</button>
       <button class="tab" role="tab" data-tab="rutas" id="t-rutas">Rutas</button>
       <button class="tab" role="tab" data-tab="carga" id="t-carga">Ruteros</button>
       <button class="tab" role="tab" data-tab="facturar" id="t-facturar">Facturación</button>
@@ -1150,7 +1151,7 @@ if(!["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"].inc
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
 const ROLES={jefe:["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"],facturacion:["recibir","facturar","estacion"],ventas:["recibir","rutas","estacion"],contabilidad:["recibir","rutas","estacion"]};
 const ROL_NOMBRE={jefe:"Jefe",facturacion:"Facturación",ventas:"Ventas",contabilidad:"Contabilidad"};
-const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",aprobar:"Aprobaciones",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
+const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
 let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
   {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},
@@ -1158,7 +1159,7 @@ const PERMISOS=[
   {g:"Aprobaciones",k:"aprobarV",t:"Autorizar Ventas (V)"},{g:"Aprobaciones",k:"aprobarC",t:"Autorizar Contab. (C)"},
   {g:"Facturación",k:"facturar",t:"Facturar y salida"},{g:"Contabilidad",k:"liquidar",t:"Cerrar rutas con chofer"},
   {g:"Otros",k:"reportes",t:"Reportes"},{g:"Otros",k:"montos",t:"Ver montos y cobros"},{g:"Otros",k:"ajustes",t:"Ajustes y claves"}];
-const PLANTILLAS={alistador:["registrar","devoluciones"],ventas:["rutas","aprobarV"],contabilidad:["rutas","aprobarC","liquidar","montos","reportes"],facturacion:["facturar"],rutero:["cargar"],rutas:["registrar","devoluciones","rutas","mover","cerrar","entregar","reportes"],admin:PERMISOS.map(x=>x.k),ninguno:[]};
+const PLANTILLAS={alistador:["registrar","devoluciones"],ventas:["aprobarV"],contabilidad:["rutas","aprobarC","liquidar","montos","reportes"],facturacion:["facturar"],rutero:["cargar"],rutas:["registrar","devoluciones","rutas","mover","cerrar","entregar","reportes"],admin:PERMISOS.map(x=>x.k),ninguno:[]};
 const ROL_A_PERM={jefe:PLANTILLAS.admin,facturacion:["registrar","devoluciones","facturar"],ventas:["rutas","aprobarV"],contabilidad:["rutas","aprobarC","liquidar"]};
 const permDeLista=l=>Object.fromEntries(PERMISOS.map(x=>[x.k,l.includes(x.k)]));
 function permisosDe(p){if(!p)return {};if(p.permisos)return p.permisos;return permDeLista(p._src==="alistadores"?PLANTILLAS.alistador:(ROL_A_PERM[p.rol]||[]))}
@@ -1167,11 +1168,11 @@ const personaPorClave=k=>{k=String(k||"").trim();return k&&!gas?personas().find(
 const tiene=(x,perm)=>!!(x&&permisosDe(x)[perm]);
 const yo=perm=>!!(sesion&&sesion.permisos&&sesion.permisos[perm]);
 const usPorClave=k=>personaPorClave(k);
-const TAB_PERM={gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],rutas:["rutas","mover","cerrar","entregar","aprobarV","aprobarC"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],ajustes:["ajustes"]};
+const TAB_PERM={gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],ajustes:["ajustes"]};
 const permitido=t=>gas?gasPermitido(t):localPermitido(t);
-const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar","registrar"],estacion:["registrar"]};
+const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar"],estacion:["registrar"]};
 function gasPermitido(t){if(!sesion)return false;if(yo("ajustes"))return true;return ((GAS_TAB[t]||TAB_PERM[t])||[]).some(yo)}
-const TAB_ORDEN=["hoy","recibir","rutas","carga","facturar","contab","gps","reportes","ajustes"];
+const TAB_ORDEN=["hoy","recibir","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes"];
 const primeraTab=()=>TAB_ORDEN.find(permitido)||"recibir";
 const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","aprobarC","liquidar","entregar","devoluciones"].some(yo);
 const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":"Usuario";
@@ -1290,7 +1291,8 @@ function render(){
   const nka=kaPendientes();$("#t-contab").innerHTML="Contabilidad"+(nka?`<span class="count">${nka}</span>`:"");
   const nb=enBodega().length;
   const npa=enBodega().filter(o=>!listo(o)).length;
-  const ta=$("#t-aprobar");if(ta)ta.innerHTML="Aprobaciones"+(npa?`<span class="count">${npa}</span>`:"");
+  const npv=enBodega().filter(o=>estV(o)==="pend").length;
+  const ta=$("#t-aprobar");if(ta)ta.innerHTML="Ventas"+(npv?`<span class="count">${npv}</span>`:"");
   $("#t-rutas").innerHTML="Rutas"+(nb?`<span class="count" style="background:var(--ink);color:var(--bg)">${nb}</span>`:"");
   renderDatalists();
   renderSesion();
@@ -3162,7 +3164,7 @@ async function descargarFormato(){
 document.addEventListener("click",e=>{if(e.target.closest("[data-formato]")){e.preventDefault();descargarFormato()}});
 
  
-const TAB_LOCAL={hoy:["reportes"],recibir:["registrar","devoluciones"],rutas:["rutas","mover","cerrar","entregar","aprobarV","aprobarC"],carga:["cargar","cerrar"],
+const TAB_LOCAL={hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
   facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],ajustes:["ajustes"],estacion:["registrar"]};
 function localPermitido(t){
   if(t==="estacion"&&!standalone&&!sesion)return true;   
