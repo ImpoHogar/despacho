@@ -652,6 +652,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
 .gps-ruta{color:var(--ink);font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;box-shadow:var(--shadow);z-index:200;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,10px);opacity:0}}}
+.rx-ia{margin-top:6px;font-size:14px;min-height:1px}.rx-ia .ia-ok{color:var(--ok,#1a7f37);font-weight:600}.rx-ia .btn{margin:4px 4px 0 0}
 </style>
 
 <header class="top">
@@ -715,6 +716,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
           <div class="field">
             <label for="rx-prof">Número de proforma</label>
             <div class="scan-in"><input id="rx-prof" class="code" inputmode="numeric" autocomplete="off" placeholder="Escanee o digite"><button type="button" class="btn camb" id="rx-cam" title="Escanear con la cámara" aria-label="Escanear la proforma con la cámara">📷</button></div>
+            <div id="rx-ia" class="rx-ia" aria-live="polite"></div>
           </div>
           <div class="field">
             <label for="rx-cli">Cliente <span class="note">(nombre o número)</span></label>
@@ -726,7 +728,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
             <input id="rx-newcod" class="code" inputmode="numeric" autocomplete="off" placeholder="Número de cliente (opcional)" style="font-size:17px" aria-label="Número de cliente">
           </div>
           <div class="field">
-            <label>Ruta <span class="note">(escójala; el sistema no la asigna sola)</span></label>
+            <label>Ruta <span class="note">(si el cliente ya tiene ruta se marca sola; puede cambiarla)</span></label>
             <div class="chips" id="rx-rutas" role="group" aria-label="Ruta"></div>
           </div>
           <div class="row2">
@@ -1330,7 +1332,7 @@ function renderRecibir(){
     <div style="min-width:0"><div class="ell"><b>${esc(o.cliente)}</b> ${o.ejemplo?'<span class="ex">Ejemplo</span>':""}</div>
     <div class="note ell"><span class="mono">${esc(o.proforma)}</span> · ${esc(o.alistador||"")} · ${r?esc(r.nombre):"Sin ruta"}</div></div>
     <span class="note mono">${fmtHora(o.recibido)}</span></div>`}).join(""):`<div class="empty">Todavía no se ha recibido nada hoy. La primera orden registrada aparecerá aquí.</div>`;
-  renderNuevoCliente();renderWho();
+  renderNuevoCliente();renderWho();iaRefrescar();
 }
 function renderNuevoCliente(){
   const name=$("#rx-cli").value.trim();
@@ -1357,6 +1359,43 @@ function renderWho(){
 }
 $("#rx-pin").addEventListener("input",renderWho);
 $("#rx-prof").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#rx-cli").focus()}});
+/* Enlace con Interakzion: al escribir la proforma se llenan el cliente y la ruta */
+const IA={p:{},ts:0,t:0,cargando:false};let rxIA=null,rxIAauto="",rxIaT=null;
+async function iaRefrescar(force){
+  if(!gas||!gasToken||IA.cargando)return;
+  if(!force&&Date.now()-IA.t<50000)return;
+  IA.cargando=true;
+  try{const r=await gcall("apiInteraIndice",gasToken,gasActor);
+    if(r&&r.ok&&r.ts){const m={};(r.p||[]).forEach(x=>{const k=String(x.n);(m[k]=m[k]||[]).push(x)});IA.p=m;IA.ts=r.ts;IA.t=Date.now();IA.off=false;if(tab==="recibir")iaAplicar()}
+    else{IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}}
+  catch(e){IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}finally{IA.cargando=false}}
+const iaCod=x=>x.d==="P"?"P"+x.c:String(x.c);
+const iaDep=x=>x.d==="P"?"Perfumería":"Bodega";
+const iaCliente=x=>{const cod=iaCod(x);return Object.values(S.clientes).find(c=>String(c.codigo||"")===cod)||null};
+function iaAplicar(elegido){
+  const box=$("#rx-ia");if(!box)return;
+  const num=$("#rx-prof").value.trim().replace(/^0+/,"");
+  rxIA=null;
+  if(!gas||!num||IA.off){box.innerHTML="";return}
+  if(!IA.t){box.innerHTML=`<span class="note">Buscando en Interakzion…</span>`;iaRefrescar(true);return}
+  const hits=IA.p[num]||[];
+  if(!hits.length){box.innerHTML=`<span class="note">No encuentro la proforma ${esc(num)} en Interakzion${IA.ts?" (revisado "+fmtHora(IA.ts)+")":""}. Escriba el cliente.</span>`;return}
+  const x=hits.length===1?hits[0]:(elegido?hits.find(h=>h.d===elegido):null);
+  if(!x){box.innerHTML=`<span class="note">Esa proforma existe en los dos sistemas. ¿De cuál es?</span> `+hits.map(h=>`<button type="button" class="btn small" data-ia-dep="${h.d}">${iaDep(h)} · ${esc(h.nm)}</button>`).join(" ");return}
+  rxIA=x;
+  const cl=iaCliente(x),nombre=cl?cl.nombre:x.nm,inp=$("#rx-cli"),actual=inp.value.trim();
+  if(!actual||actual===rxIAauto){
+    inp.value=nombre;rxIAauto=nombre;
+    $("#rx-newcod").value=cl?"":iaCod(x);
+    if(cl&&rutaById(cl.ruta))rxRuta=cl.ruta;
+    renderNuevoCliente();
+  }
+  const sinRuta=!(cl&&rutaById(cl.ruta));
+  box.innerHTML=`<span class="ia-ok">✓ ${iaDep(x)} · cliente ${esc(iaCod(x))} · ${esc(x.e||"")}</span>`+(sinRuta?` <span class="note">Este cliente todavía no tiene ruta: escójala abajo.</span>`:"");
+}
+$("#rx-prof").addEventListener("input",()=>{clearTimeout(rxIaT);rxIaT=setTimeout(()=>iaAplicar(),180)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-ia-dep]");if(b)iaAplicar(b.dataset.iaDep)});
+setInterval(()=>{if(tab==="recibir")iaRefrescar()},15000);
 
 $("#rxform").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -1392,12 +1431,12 @@ $("#rxform").addEventListener("submit",async e=>{
     const junto=ubicManual?null:ubicDelCliente("n:"+norm(cli?cli.nombre:nombre),ruta,id);
     const ubic=ubicManual||(junto?junto.ubic:siguienteUbic(letra));
     rxJunto=junto?{ubic:junto.ubic,proforma:junto.proforma}:null;
-    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false};
+    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false,...(rxIA&&String(rxIA.n)===proforma.replace(/^0+/,"")?{depto:rxIA.d}:{})};
     await put("ordenes",id,o);
     ultimaOrden={id,...o};
 
     showResult(ultimaOrden);
-    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;renderWho();
+    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;rxIA=null;rxIAauto="";$("#rx-ia").innerHTML="";renderWho();
     renderNuevoCliente();$("#rx-prof").focus();
     await mandarImprimir(ultimaOrden);
   }catch(x){fail(x)}
@@ -4047,7 +4086,7 @@ $("#rx-cam").addEventListener("click",()=>{let leido="";
     alLeer:cod=>{const o=ordenPorCodigo(cod,x=>x.estado==="bodega"||x.estado==="cerrada");
       if(o)return {ok:false,msg:"Esa proforma ya está registrada",sub:`${o.proforma} · ${sinEj(o.cliente)} · está en ${o.ubic}`};
       leido=cod;return {ok:true,msg:"Proforma "+cod}},
-    alCerrar:ok=>{if(ok&&leido){$("#rx-prof").value=leido;$("#rx-cli").focus()}else $("#rx-prof").focus()}})});
+    alCerrar:ok=>{if(ok&&leido){$("#rx-prof").value=leido;iaAplicar();$("#rx-cli").focus()}else $("#rx-prof").focus()}})});
  
 $("#dv-cam").addEventListener("click",()=>{let leido="";
   abrirEscaner({titulo:"Escanear la devolución",ayuda:"Apunte a la etiqueta de la caja que regresó (el código grande).",
