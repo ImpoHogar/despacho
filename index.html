@@ -758,8 +758,9 @@ html:has(.kliq),.kliq{overflow-anchor:none}
             <input id="rx-newcod" class="code" inputmode="numeric" autocomplete="off" placeholder="Número de cliente (opcional)" style="font-size:17px" aria-label="Número de cliente">
           </div>
           <div class="field">
-            <label>Ruta <span class="note">(si el cliente ya tiene ruta se marca sola; puede cambiarla)</span></label>
+            <label>Ruta <span class="note">(se marca sola según el cliente; Despacho la acomoda después en el tablero)</span></label>
             <div class="chips" id="rx-rutas" role="group" aria-label="Ruta"></div>
+            <div class="note" id="rx-ruta-auto" aria-live="polite"></div>
           </div>
           <div class="field">
             <label id="rx-timb-l">¿El pedido es timbrado? <span class="note">(obligatorio)</span></label>
@@ -1364,7 +1365,7 @@ function renderDatalists(){
 }
 
  
-let rxRuta=null, rxJunto=null;
+let rxRuta=null, rxJunto=null, rxRutaMan=false;
 function renderRecibir(){
   const hoy=Object.values(S.ordenes).filter(o=>isToday(o.recibido)).sort((a,b)=>b.recibido-a.recibido).slice(0,10);
   $("#rx-recent").innerHTML=hoy.length?hoy.map(o=>{const r=rutaById(o.ruta);return `<div class="li">
@@ -1379,11 +1380,14 @@ function renderNuevoCliente(){
   const show=name.length>1&&!findCliente(name);
   $("#rx-new").hidden=!show;
   const cl=findCliente(name), hab=cl&&rutaById(cl.ruta)?cl.ruta:null;
+  if(!rxRutaMan)rxRuta=name.length>1?(hab||""):null;
+  const ra=$("#rx-ruta-auto");
+  if(ra)ra.innerHTML=name.length<2?"":rxRutaMan?"Ruta escogida a mano.":hab?`Ruta automática: <b>${esc(rutaById(hab).nombre)}</b>.`:"Este cliente aún no tiene ruta: queda en <b>Pendientes</b> y Despacho lo acomoda en el tablero.";
   $("#rx-rutas").innerHTML=S.rutas.map(r=>`<button type="button" class="chip${hab===r.id?" hab":""}" style="--c:${rutaColor(r.id)}" aria-pressed="${rxRuta===r.id}" data-r="${r.id}">${esc(r.nombre)}${hab===r.id?"<small>· habitual</small>":""}</button>`).join("")+
     `<button type="button" class="chip" style="--c:var(--r0)" aria-pressed="${rxRuta===""}" data-r="">Pendiente (decidir en tablero)</button>`;
 }
-$("#rx-cli").addEventListener("input",()=>renderNuevoCliente());
-$("#rx-rutas").addEventListener("click",e=>{const b=e.target.closest("[data-r]");if(!b)return;rxRuta=b.dataset.r;renderNuevoCliente()});
+$("#rx-cli").addEventListener("input",()=>{rxRutaMan=false;renderNuevoCliente()});
+$("#rx-rutas").addEventListener("click",e=>{const b=e.target.closest("[data-r]");if(!b)return;rxRuta=b.dataset.r;rxRutaMan=true;renderNuevoCliente()});
 document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{const i=$("#rx-bul");i.value=Math.max(1,(parseInt(i.value)||1)+parseInt(b.dataset.step))}));
 const alPorClave=k=>{const x=personaPorClave(k);return x&&tiene(x,"registrar")?x:null};
 const hayRegistradores=()=>personas().some(x=>tiene(x,"registrar"));
@@ -1431,7 +1435,7 @@ function iaAplicar(elegido){
     renderNuevoCliente();
   }
   const sinRuta=!(cl&&rutaById(cl.ruta));
-  box.innerHTML=`<span class="ia-ok">✓ ${iaDep(x)} · cliente ${esc(iaCod(x))} · ${esc(x.e||"")}</span>`+(sinRuta?` <span class="note">Este cliente todavía no tiene ruta: escójala abajo.</span>`:"");
+  box.innerHTML=`<span class="ia-ok">✓ ${iaDep(x)} · cliente ${esc(iaCod(x))} · ${esc(x.e||"")}</span>`+(sinRuta?` <span class="note">Este cliente aún no tiene ruta: queda en Pendientes para que Despacho lo acomode.</span>`:"");
 }
 $("#rx-prof").addEventListener("input",()=>{clearTimeout(rxIaT);rxIaT=setTimeout(()=>iaAplicar(),180)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ia-dep]");if(b)iaAplicar(b.dataset.iaDep)});
@@ -1516,7 +1520,7 @@ $("#rxform").addEventListener("submit",async e=>{
   const keyPre=(()=>{const c0=findCliente(nombre);return "n:"+norm(c0?c0.nombre:nombre)})();
   if(ubicManual){const occ=ocupante(ubicManual,id,keyPre);if(occ){err.textContent=`La ubicación ${ubicManual} ya está ocupada por ${occ.cliente} (proforma ${occ.proforma}). Escoja otra o déjela vacía.`;$("#rx-ubic").focus();return}}
   let cli=findCliente(nombre);
-  if(rxRuta===null){err.textContent="Escoja la ruta (o «Pendiente» si se decide después en el tablero).";return}
+  if(rxRuta===null){const c0=findCliente(nombre);rxRuta=c0&&rutaById(c0.ruta)?c0.ruta:""}
   try{
     if(!cli){
       const cid=newId("c");const codigo=$("#rx-newcod").value.trim();cli={id:cid,nombre,ruta:rxRuta||null,codigo};
@@ -1532,7 +1536,7 @@ $("#rxform").addEventListener("submit",async e=>{
     ultimaOrden={id,...o};
 
     showResult(ultimaOrden);
-    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;rxTimb=null;pintarTimb();rxIA=null;rxIAauto="";$("#rx-ia").innerHTML="";renderWho();
+    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;rxRutaMan=false;rxTimb=null;pintarTimb();rxIA=null;rxIAauto="";$("#rx-ia").innerHTML="";renderWho();
     renderNuevoCliente();$("#rx-prof").focus();
     await mandarImprimir(ultimaOrden);
   }catch(x){fail(x)}
