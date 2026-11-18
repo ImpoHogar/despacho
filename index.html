@@ -321,6 +321,13 @@ details.hist summary{cursor:pointer;font-weight:600;padding:8px 0}
 .kbar2{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
 .kph{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px}
 .kph h3{font-size:22px;text-transform:uppercase}
+.rx-timb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rx-timb button{min-height:56px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer}
+.rx-timb button[aria-pressed="true"][data-timb="1"]{background:#7b2cbf;border-color:#7b2cbf;color:#fff}
+.rx-timb button[aria-pressed="true"][data-timb="0"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.rx-timb.falta button{border-color:var(--bad)}
+.tg-timb{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700;background:#7b2cbf;color:#fff}
+.tg-notimb{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--muted)}
 .seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;flex:none;background:var(--panel)}
 .seg button{border:0;background:transparent;padding:6px 11px;font-weight:600;cursor:pointer;min-height:36px;font-size:14px;color:var(--muted)}
 .seg button+button{border-left:1.5px solid var(--line)}
@@ -753,6 +760,13 @@ html:has(.kliq),.kliq{overflow-anchor:none}
           <div class="field">
             <label>Ruta <span class="note">(si el cliente ya tiene ruta se marca sola; puede cambiarla)</span></label>
             <div class="chips" id="rx-rutas" role="group" aria-label="Ruta"></div>
+          </div>
+          <div class="field">
+            <label id="rx-timb-l">¿El pedido es timbrado? <span class="note">(obligatorio)</span></label>
+            <div class="rx-timb" id="rx-timb" role="group" aria-labelledby="rx-timb-l">
+              <button type="button" data-timb="1" aria-pressed="false">Timbrado</button>
+              <button type="button" data-timb="0" aria-pressed="false">No timbrado</button>
+            </div>
           </div>
           <div class="row2">
             <div class="field">
@@ -1474,6 +1488,10 @@ function renderAlisto(){
 document.addEventListener("change",e=>{const c=e.target.closest("[data-al-ns]");if(!c)return;const ns=new Set(alNoSale());c.checked?ns.add(c.dataset.alNs):ns.delete(c.dataset.alNs);lsSet("despacho.alisto.nosale",JSON.stringify({f:alHoy(),r:[...ns]}));renderAlisto()});
 setInterval(()=>{if(tab==="alisto"){iaRefrescar();renderAlisto()}},20000);
 
+let rxTimb=null;
+const pintarTimb=()=>{const g=$("#rx-timb");if(!g)return;g.querySelectorAll("[data-timb]").forEach(b=>b.setAttribute("aria-pressed",String(rxTimb!==null&&String(+rxTimb)===b.dataset.timb)));if(rxTimb!==null)g.classList.remove("falta")};
+$("#rx-timb").addEventListener("click",e=>{const b=e.target.closest("[data-timb]");if(!b)return;rxTimb=b.dataset.timb==="1";pintarTimb();const er=$("#rx-err");if(er&&/timbrado/.test(er.textContent))er.textContent=""});
+const timbTag=o=>o&&o.timbrado===true?'<span class="tg-timb">Timbrado</span>':o&&o.timbrado===false?'<span class="tg-notimb">No timbrado</span>':"";
 $("#rxform").addEventListener("submit",async e=>{
   e.preventDefault();
   const err=$("#rx-err");err.textContent="";
@@ -1488,6 +1506,7 @@ $("#rxform").addEventListener("submit",async e=>{
   }
   if(!proforma){err.textContent="Falta el número de proforma.";$("#rx-prof").focus();return}
   if(!nombre){err.textContent="Falta el cliente.";$("#rx-cli").focus();return}
+  if(rxTimb===null){err.textContent="Indique si el pedido es timbrado o no timbrado.";const g=$("#rx-timb");g.classList.add("falta");g.querySelector("button").focus();return}
   if(!al){err.textContent=hayRegistradores()?(personaPorClave($("#rx-pin").value)?"Esa persona no tiene permiso para registrar órdenes.":"Clave incorrecta. Revísela o pida que la registren en Ajustes."):"Primero registre a los alistadores y sus claves en Ajustes.";$("#rx-pin").focus();return}
   const alistador=al.nombre;
   const id="o_"+proforma.replace(/[^A-Za-z0-9_-]/g,"_").slice(0,80);
@@ -1508,12 +1527,12 @@ $("#rxform").addEventListener("submit",async e=>{
     const junto=ubicManual?null:ubicDelCliente("n:"+norm(cli?cli.nombre:nombre),ruta,id);
     const ubic=ubicManual||(junto?junto.ubic:siguienteUbic(letra));
     rxJunto=junto?{ubic:junto.ubic,proforma:junto.proforma}:null;
-    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false,...(rxIA&&String(rxIA.n)===proforma.replace(/^0+/,"")?{depto:rxIA.d}:{})};
+    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,timbrado:rxTimb,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false,...(rxIA&&String(rxIA.n)===proforma.replace(/^0+/,"")?{depto:rxIA.d}:{})};
     await put("ordenes",id,o);
     ultimaOrden={id,...o};
 
     showResult(ultimaOrden);
-    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;rxIA=null;rxIAauto="";$("#rx-ia").innerHTML="";renderWho();
+    $("#rx-prof").value="";$("#rx-cli").value="";$("#rx-newcod").value="";$("#rx-ubic").value="";$("#rx-bul").value=1;$("#rx-pin").value="";rxRuta=null;rxTimb=null;pintarTimb();rxIA=null;rxIAauto="";$("#rx-ia").innerHTML="";renderWho();
     renderNuevoCliente();$("#rx-prof").focus();
     await mandarImprimir(ultimaOrden);
   }catch(x){fail(x)}
@@ -1526,7 +1545,7 @@ function showResult(o){
   el.innerHTML=`<div class="eyebrow">Deje la mercancía en</div>
     <span class="tag big">${esc(o.ubic)}</span>
     <span class="routeline" style="--c:${rutaColor(o.ruta)}"><span class="dot"></span>${r?esc(r.nombre):"Pendiente de ruta"}</span>
-    <div class="who"><b>${esc(o.cliente)}</b> · proforma <span class="mono">${esc(o.proforma)}</span><span id="rx-cj"> · ${o.bultos} caja${o.bultos==1?'':'s'}</span></div>
+    <div class="who"><b>${esc(o.cliente)}</b> · proforma <span class="mono">${esc(o.proforma)}</span> ${timbTag(o)}<span id="rx-cj"> · ${o.bultos} caja${o.bultos==1?'':'s'}</span></div>
     ${bloqueo(o)?`<div class="err">Bloqueado por ${esc(bloqueo(o).depto)}: ${esc(bloqueo(o).motivo)}. Queda en «Pendientes», bloqueado, hasta que lo liberen.</div>`:""}
     ${String(o.ubic).startsWith("Z-")?`<div class="err">El estante de esta ruta está lleno. Ubíquela en la zona de desborde Z.</div>`:""}
     ${rxJunto&&rxJunto.ubic===o.ubic?`<div class="note" style="color:var(--ok);font-weight:600">Misma ubicación que su otra orden (proforma ${esc(rxJunto.proforma)}). Póngala junto a esa mercancía.</div>`:""}
@@ -1900,7 +1919,7 @@ function etiquetaHTML(o,modo){
       <div class="lb-k">PROFORMA</div><svg class="lb-bc" data-bc="${esc(o.proforma)}"></svg><div class="lb-prof">${esc(o.proforma)}</div>
       <div class="lb-bottom"><div><div class="lb-k">RECIBIDO</div><div class="lb-rec">${esc(fd)}</div><div class="lb-rec-h">${esc(fh)}</div></div>
       ${cod?`<div class="lb-cb"><svg data-bc="${esc(cod)}" data-small="1"></svg>Cliente ${esc(cod)}</div>`:""}</div>
-      <div class="lb-foot">Alistó: ${esc(o.alistador||"")}${o.ejemplo?" · EJEMPLO":""}</div></div>`;
+      <div class="lb-foot">Alistó: ${esc(o.alistador||"")}${o.timbrado===true?" · <b>TIMBRADO</b>":o.timbrado===false?" · NO TIMBRADO":""}${o.ejemplo?" · EJEMPLO":""}</div></div>`;
   }
   return h;
 }
@@ -2133,7 +2152,7 @@ function cierreHtml(c){
       ${c.tipo==="bodega"?"":cargaOk(c)?(c.carga&&c.carga.ok?`<span class="state done" title="Contada por ${esc(c.carga.por||"")}">Carga ✓ ${esc(c.carga.por||"")}</span>`:`<span class="state done">Sin cajas que contar</span>`):`<span class="state pend">Carga sin contar${c.carga&&c.carga.intentos?` · ${c.carga.intentos} intento${c.carga.intentos==1?"":"s"}`:""}</span>`}</div></header>
     <div class="tablewrap"><table><thead><tr><th style="width:56px">Lista</th><th>Proforma</th><th style="min-width:110px">N.º factura</th><th>Cliente</th><th>Ubicación</th><th class="num">Cajas</th>${vm?`<th class="num">Monto ₡</th><th>Pago</th>`:""}</tr></thead><tbody>
     ${itemsAgrupados(c).map((i,ix,arr)=>`<tr class="${f[i.id]?"done":""}" style="${ix&&arr[ix-1].cliente!==i.cliente?"border-top:2px solid var(--ink)":""}"><td><input type="checkbox" class="chk" id="f-${esc(c.id)}-${esc(i.id)}" data-oid="${esc(i.id)}" ${f[i.id]?"checked":""} aria-label="Facturada ${esc(i.proforma)}"></td>
-      <td class="mono pf">${esc(i.proforma)}${i.devuelto?' <span class="ex" style="color:var(--r6)">Ya facturada · devolución</span>':""}${i.notaDev?`<div class="note" style="font-size:12px;color:var(--r6)">↩ ${esc(i.notaDev)}</div>`:""}</td><td><input class="fx-fac mono" data-oid="${esc(i.id)}" value="${esc(facDe(i))}" placeholder="—" autocomplete="off" aria-label="Número de factura de la proforma ${esc(i.proforma)}"></td><td>${esc(i.cliente)}</td><td><span class="tag">${esc(i.ubic)}</span></td><td class="num">${i.bultos}</td>${vm?`<td class="num"><input class="fx-mon mono" type="number" min="0" step="1" data-oid="${esc(i.id)}" value="${esc(monDe(i))}" placeholder="0" aria-label="Monto de ${esc(i.proforma)}"></td><td><select class="fx-cond" data-oid="${esc(i.id)}" aria-label="Forma de pago de ${esc(i.proforma)}"><option value="contado" ${condDe(i)==="contado"?"selected":""}>Contado</option><option value="credito" ${condDe(i)==="credito"?"selected":""}>Crédito</option></select></td>`:""}</tr>`).join("")}
+      <td class="mono pf">${esc(i.proforma)} ${timbTag(ordDe(i))}${i.devuelto?' <span class="ex" style="color:var(--r6)">Ya facturada · devolución</span>':""}${i.notaDev?`<div class="note" style="font-size:12px;color:var(--r6)">↩ ${esc(i.notaDev)}</div>`:""}</td><td><input class="fx-fac mono" data-oid="${esc(i.id)}" value="${esc(facDe(i))}" placeholder="—" autocomplete="off" aria-label="Número de factura de la proforma ${esc(i.proforma)}"></td><td>${esc(i.cliente)}</td><td><span class="tag">${esc(i.ubic)}</span></td><td class="num">${i.bultos}</td>${vm?`<td class="num"><input class="fx-mon mono" type="number" min="0" step="1" data-oid="${esc(i.id)}" value="${esc(monDe(i))}" placeholder="0" aria-label="Monto de ${esc(i.proforma)}"></td><td><select class="fx-cond" data-oid="${esc(i.id)}" aria-label="Forma de pago de ${esc(i.proforma)}"><option value="contado" ${condDe(i)==="contado"?"selected":""}>Contado</option><option value="credito" ${condDe(i)==="credito"?"selected":""}>Crédito</option></select></td>`:""}</tr>`).join("")}
     </tbody></table></div>
     ${tareasCierreHtml(c)}
     <div class="actions">
@@ -2201,7 +2220,7 @@ function renderAutFact(){
   lista.forEach(o=>{const k=rutaById(o.ruta)?o.ruta:"_";if(!gs.has(k))gs.set(k,[]);gs.get(k).push(o)});
   const keys=[...gs.keys()].sort((a,b)=>(a==="_"?999:orden.indexOf(a))-(b==="_"?999:orden.indexOf(b)));
   const fila=o=>{const f=String(o.factura||"").trim(),nuevo=!f&&Date.now()-autTs(o)<2*3600*1000,fe=o.ventas&&o.ventas.fecha&&o.ventas.fecha>hoyS?o.ventas.fecha:"";
-    return `<tr class="${f?"done":""}"><td class="mono pf">${esc(o.proforma)} ${nuevo?'<span class="nuevo">Nuevo</span>':""}</td>
+    return `<tr class="${f?"done":""}"><td class="mono pf">${esc(o.proforma)} ${nuevo?'<span class="nuevo">Nuevo</span>':""} ${timbTag(o)}</td>
       <td><input class="fx-fac mono" data-oid="${esc(o.id)}" value="${esc(f)}" placeholder="—" autocomplete="off" aria-label="Número de factura de la proforma ${esc(o.proforma)}"></td>
       <td>${esc(sinEj(o.cliente))}${fe?` <span class="kc pend">Entrega programada ${esc(fe.split("-").reverse().slice(0,2).join("/"))}</span>`:""}</td><td><span class="tag">${esc(o.ubic||"")}</span></td><td class="num">${o.bultos}</td>
       ${vm?`<td class="num"><input class="fx-mon mono" type="number" min="0" step="1" data-oid="${esc(o.id)}" value="${esc(monDe(o))}" placeholder="0" aria-label="Monto de ${esc(o.proforma)}"></td><td><select class="fx-cond" data-oid="${esc(o.id)}" aria-label="Forma de pago de ${esc(o.proforma)}"><option value="contado" ${condDe(o)==="contado"?"selected":""}>Contado</option><option value="credito" ${condDe(o)==="credito"?"selected":""}>Crédito</option></select></td>`:""}
@@ -6481,7 +6500,7 @@ function renderBodFact(){
   bodListos().forEach(o=>{if(!pasa(o.cliente+" "+o.proforma))return;const k=fbClave(o);if(!gs.has(k))gs.set(k,{k,cliente:o.cliente,os:[]});gs.get(k).os.push(o)});
   const rets=bodRetirados().filter(c=>pasa(c.cliente+" "+(c.items||[]).map(i=>i.proforma).join(" ")));
   const fila=(o,ret)=>{const lt=ret||listo(o);
-    return `<div class="fbod-it"><span class="tag">${esc(o.ubic||"")}</span><span class="mono">${esc(o.proforma)}</span><span class="note">${cj(o.bultos)}</span>${lt?"":`<span class="kc pend">Falta aprobación${estV(o)!=="ok"?" de Ventas":estC(o)!=="ok"?" de Contabilidad":""}</span>`}${o.devuelto?' <span class="ex" style="color:var(--r6)">Ya facturada · devolución</span>':""}</div>`};
+    return `<div class="fbod-it"><span class="tag">${esc(o.ubic||"")}</span><span class="mono">${esc(o.proforma)}</span> ${timbTag(o)}<span class="note">${cj(o.bultos)}</span>${lt?"":`<span class="kc pend">Falta aprobación${estV(o)!=="ok"?" de Ventas":estC(o)!=="ok"?" de Contabilidad":""}</span>`}${o.devuelto?' <span class="ex" style="color:var(--r6)">Ya facturada · devolución</span>':""}</div>`};
   const grupos=[...gs.values()].sort((a,b)=>String(a.cliente).localeCompare(String(b.cliente),"es")).map(g=>{const ok=g.os.filter(listo),cond=condOrden(g.os[0]);
     return `<div class="fbod-g"><div class="fbod-gh"><div><b>${esc(g.cliente)}</b> <span class="note">· ${condTxt(cond)}</span></div>${ok.length?`<button type="button" class="btn small primary" data-fb-fact="${esc(g.k)}">Facturar y entregar${ok.length>1?` (${ok.length})`:""}</button>`:""}</div>${g.os.map(o=>fila(o,false)).join("")}</div>`}).join("");
   const retH=rets.map(c=>`<div class="fbod-g"><div class="fbod-gh"><div><b>${esc(c.cliente)}</b> <span class="note">· Ya lo retiró${c.retira?" "+esc(c.retira):""} · ${fmtFecha(c.fecha)}</span></div><button type="button" class="btn small primary" data-fb-ret="${esc(c.id)}">Facturar</button></div>${(c.items||[]).map(i=>fila({...(S.ordenes[i.id]||{}),...i},true)).join("")}</div>`).join("");
