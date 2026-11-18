@@ -613,6 +613,12 @@ html:has(.kliq),.kliq{overflow-anchor:none}
 /* reportes: las tablas anchas se desplazan dentro de su cuadro (antes ensanchaban toda la página) */
 #rp-out{grid-template-columns:minmax(0,1fr)}
 .fbod{display:grid;gap:10px;border-top:5px solid var(--r6)}
+.faut{display:grid;gap:10px;border-top:5px solid var(--ok)}
+.faut-g{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:6px}
+.faut-gh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.faut table td,.faut table th{padding:6px 8px}
+.faut tr.done td{opacity:.55}
+.faut .nuevo{background:var(--ok);color:#fff;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700}
 .fbod-g{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:6px}
 .fbod-gh{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .fbod-it{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-left:4px}
@@ -836,13 +842,14 @@ html:has(.kliq),.kliq{overflow-anchor:none}
   <!-- FACTURACIÓN -->
   <section data-view="facturar" hidden>
     <div>
-      <h2 style="font-size:30px">Rutas cerradas por facturar</h2>
-      <div class="note">Cada ruta cerrada llega aquí con su lista de proformas. Marque cada una al facturarla; cuando la ruta esté completa, confirme la salida del camión.</div>
+      <h2 style="font-size:30px">Facturación</h2>
+      <div class="note">Arriba salen los pedidos apenas Ventas y Contabilidad los autorizan. Más abajo, las rutas cerradas: cuando la ruta esté completa, confirme la salida del camión.</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <label class="btn small" style="position:relative;overflow:hidden">Importar facturas (Excel o CSV)<input type="file" id="fx-file" accept=".xlsx,.xls,.csv,text/csv" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
       <span class="note">Empareja cada factura con su proforma por cliente y cantidad de cajas. Usted revisa antes de guardar. También puede escribir o escanear el número en cada línea.</span>
     </div>
+    <div class="panel faut" id="faut" hidden></div>
     <div class="panel fbod" id="fbod" hidden></div>
     <div class="panel fdg" id="fdg" hidden></div>
     <div class="fact" id="fact"></div>
@@ -1303,8 +1310,9 @@ function render(){
   if(dragging){pendingRender=true;return}
   setTimeout(revisarPendientes,0);
   $("#hoy").textContent=new Date().toLocaleDateString("es-CR",{weekday:"long",day:"numeric",month:"long"});
-  const porFact=Object.values(S.cierres).filter(c=>c.estado==="por_facturar").length;
+  const porFact=Object.values(S.cierres).filter(c=>c.estado==="por_facturar").length+autSinFactura().length;
   $("#t-facturar").innerHTML="Facturación"+(porFact?`<span class="count">${porFact}</span>`:"");
+  avisarAutorizados();
   const porCont=cargasPend().filter(c=>!cargaOk(c)).length;
   $("#t-carga").innerHTML="Ruteros"+(porCont?`<span class="count">${porCont}</span>`:"");
   const nka=kaPendientes();$("#t-contab").innerHTML="Contabilidad"+(nka?`<span class="count">${nka}</span>`:"");
@@ -1727,7 +1735,7 @@ async function cerrarRuta(rid,ruteroId,vehiculo){
   const rid2=ruteroId!==undefined?ruteroId:r.ruteroId;const rtr=rid2&&personas().find(x=>x.id===rid2);
   const cierre={ruta:rid,rutaNombre:r.nombre,fecha:now.getTime(),estado:"por_facturar",ruteroId:rtr?rtr.id:"",ruteroNombre:rtr?rtr.nombre:"",vehiculo:vehiculo||"",
     items:items.map(o=>({id:o.id,proforma:o.proforma,cliente:o.cliente,bultos:o.bultos,ubic:o.ubic,devuelto:!!o.devuelto,notaDev:o.devuelto?notaDev(o):""})),
-    facturadas:Object.fromEntries(items.filter(o=>o.devuelto).map(o=>[o.id,true])),totalBultos:items.reduce((s,o)=>s+o.bultos,0),ejemplo:items.length>0&&items.every(o=>o.ejemplo),recibos:1,...(tps.length?{tareas:Object.fromEntries(tps.map(t=>[t.id,tareaSnap(t)]))}:{})};
+    facturadas:Object.fromEntries(items.filter(o=>o.devuelto||String(o.factura||"").trim()).map(o=>[o.id,true])),totalBultos:items.reduce((s,o)=>s+o.bultos,0),ejemplo:items.length>0&&items.every(o=>o.ejemplo),recibos:1,...(tps.length?{tareas:Object.fromEntries(tps.map(t=>[t.id,tareaSnap(t)]))}:{})};
   try{
     await put("cierres",cid,cierre);
     for(const t of tps)await patch("tareas",t.id,{estado:"en_ruta",cierreId:cid});
@@ -2089,7 +2097,7 @@ function csvDe(c){
 }
 
  
-function renderFact(){renderDevFact();renderBodFact();
+function renderFact(){renderDevFact();renderBodFact();renderAutFact();
   const ae=document.activeElement;
   if(ae&&$("#fact").contains(ae)&&/^(INPUT|SELECT)$/.test(ae.tagName)&&!ae.classList.contains("chk"))return;
   const act=Object.values(S.cierres).filter(c=>c.estado!=="despachado"&&!esCobroB(c)&&c.tipo!=="bodega").sort((a,b)=>a.fecha-b.fecha);
@@ -2145,7 +2153,7 @@ $("#fact").addEventListener("change",async e=>{
   const all=c.items.every(i=>f[i.id]);
   try{await patch("cierres",c.id,{facturadas:f,estado:all?"facturado":"por_facturar"})}catch(x){fail(x)}
 });
-$("#fact").addEventListener("change",async e=>{
+async function fxCambio(e){
   const inp=e.target.closest(".fx-fac,.fx-mon,.fx-cond");if(!inp)return;
   const oid=inp.dataset.oid,o=S.ordenes[oid],art=inp.closest("[data-cid]"),c=art&&S.cierres[art.dataset.cid];
   const v=inp.value.trim();
@@ -2158,9 +2166,55 @@ $("#fact").addEventListener("change",async e=>{
     }else if(inp.classList.contains("fx-mon")){if(o)await patch("ordenes",oid,{monto:v===""?"":Math.max(0,Math.round(Number(v)||0))})}
     else if(o)await patch("ordenes",oid,{condicion:inp.value});
   }catch(x){fail(x)}
-});
-$("#fact").addEventListener("keydown",e=>{const i=e.target.closest(".fx-fac,.fx-mon");if(!i||e.key!=="Enter")return;e.preventDefault();
-  const cls=i.classList.contains("fx-fac")?".fx-fac":".fx-mon";const t=[...$("#fact").querySelectorAll(cls)];const n=t[t.indexOf(i)+1];i.blur();if(n)n.focus()});
+}
+const fxEnter=box=>e=>{const i=e.target.closest(".fx-fac,.fx-mon");if(!i||e.key!=="Enter")return;e.preventDefault();
+  const cls=i.classList.contains("fx-fac")?".fx-fac":".fx-mon";const t=[...box.querySelectorAll(cls)];const n=t[t.indexOf(i)+1];i.blur();if(n)n.focus()};
+["#fact","#faut"].forEach(sel=>{const box=$(sel);box.addEventListener("change",fxCambio);box.addEventListener("keydown",fxEnter(box))});
+
+/* ── Autorizados para facturar: en cuanto Ventas y Contabilidad dan su check, el pedido sale aquí ── */
+const autOk=o=>o&&o.estado==="bodega"&&!o.devuelto&&!esBodega(o.ruta)&&estV(o)==="ok"&&estC(o)==="ok";
+const autTs=o=>Math.max(Number(o.ventas&&o.ventas.ts)||0,Number(o.conta&&o.conta.ts)||0)||Number(o.recibido)||0;
+const autorizados=()=>Object.values(S.ordenes).filter(autOk);
+const autSinFactura=()=>(yo("facturar")||yo("ajustes"))?autorizados().filter(o=>!String(o.factura||"").trim()):[];
+let autVistos=null;
+function avisarAutorizados(){
+  if(!sesion||!(yo("facturar")||yo("ajustes"))){autVistos=null;return}
+  const ids=autSinFactura().map(o=>o.id);
+  if(autVistos===null){autVistos=new Set(ids);return}
+  const nuevos=ids.filter(id=>!autVistos.has(id));ids.forEach(id=>autVistos.add(id));
+  if(!nuevos.length)return;
+  const o=S.ordenes[nuevos[0]];
+  toast(nuevos.length===1?`Nuevo pedido autorizado para facturar: proforma ${o.proforma} · ${sinEj(o.cliente)}`:`${nuevos.length} pedidos nuevos autorizados para facturar`);
+  try{const A=window.AudioContext||window.webkitAudioContext;if(A){const ac=autAudio||(autAudio=new A()),t=ac.currentTime;[0,0.18].forEach((d,k)=>{const os=ac.createOscillator(),g=ac.createGain();os.frequency.value=k?1046:784;g.gain.setValueAtTime(0.0001,t+d);g.gain.exponentialRampToValueAtTime(0.25,t+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.16);os.connect(g);g.connect(ac.destination);os.start(t+d);os.stop(t+d+0.17)})}}catch(x){}
+}
+let autAudio=null,autVerFact=false;
+function renderAutFact(){
+  const box=$("#faut");if(!box)return;
+  if(!yo("facturar")&&!yo("ajustes")){box.hidden=true;box.innerHTML="";return}
+  const ae=document.activeElement;if(ae&&box.contains(ae)&&/^(INPUT|SELECT)$/.test(ae.tagName))return;
+  box.hidden=false;
+  const vm=verMontosUI(),hoyS=(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
+  const todos=autorizados(),pend=todos.filter(o=>!String(o.factura||"").trim()),hechas=todos.length-pend.length;
+  const lista=autVerFact?todos:pend;
+  const orden=S.rutas.map(r=>r.id);
+  const gs=new Map();
+  lista.forEach(o=>{const k=rutaById(o.ruta)?o.ruta:"_";if(!gs.has(k))gs.set(k,[]);gs.get(k).push(o)});
+  const keys=[...gs.keys()].sort((a,b)=>(a==="_"?999:orden.indexOf(a))-(b==="_"?999:orden.indexOf(b)));
+  const fila=o=>{const f=String(o.factura||"").trim(),nuevo=!f&&Date.now()-autTs(o)<2*3600*1000,fe=o.ventas&&o.ventas.fecha&&o.ventas.fecha>hoyS?o.ventas.fecha:"";
+    return `<tr class="${f?"done":""}"><td class="mono pf">${esc(o.proforma)} ${nuevo?'<span class="nuevo">Nuevo</span>':""}</td>
+      <td><input class="fx-fac mono" data-oid="${esc(o.id)}" value="${esc(f)}" placeholder="—" autocomplete="off" aria-label="Número de factura de la proforma ${esc(o.proforma)}"></td>
+      <td>${esc(sinEj(o.cliente))}${fe?` <span class="kc pend">Entrega programada ${esc(fe.split("-").reverse().slice(0,2).join("/"))}</span>`:""}</td><td><span class="tag">${esc(o.ubic||"")}</span></td><td class="num">${o.bultos}</td>
+      ${vm?`<td class="num"><input class="fx-mon mono" type="number" min="0" step="1" data-oid="${esc(o.id)}" value="${esc(monDe(o))}" placeholder="0" aria-label="Monto de ${esc(o.proforma)}"></td><td><select class="fx-cond" data-oid="${esc(o.id)}" aria-label="Forma de pago de ${esc(o.proforma)}"><option value="contado" ${condDe(o)==="contado"?"selected":""}>Contado</option><option value="credito" ${condDe(o)==="credito"?"selected":""}>Crédito</option></select></td>`:""}
+      <td class="note">${fmtHora(autTs(o))}</td></tr>`};
+  const grupos=keys.map(k=>{const os=gs.get(k).sort((a,b)=>autTs(a)-autTs(b)),r=rutaById(k);
+    return `<div class="faut-g"><div class="faut-gh"><span class="dot" style="--c:${r?rutaColor(r.id):"var(--muted)"}"></span><b>${r?esc(r.nombre):"Sin ruta asignada"}</b><span class="note">· ${os.length} proforma${os.length==1?"":"s"} · ${cj(os.reduce((s,o)=>s+(Number(o.bultos)||0),0))}</span></div>
+      <div class="tablewrap"><table><thead><tr><th>Proforma</th><th style="min-width:110px">N.º factura</th><th>Cliente</th><th>Ubicación</th><th class="num">Cajas</th>${vm?`<th class="num">Monto ₡</th><th>Pago</th>`:""}<th>Autorizado</th></tr></thead><tbody>${os.map(fila).join("")}</tbody></table></div></div>`}).join("");
+  box.innerHTML=`<div class="kph"><h3>Autorizados para facturar ${pend.length?`<span class="count" style="background:var(--ok);color:#fff;border-radius:999px;padding:0 9px;font-size:16px;vertical-align:middle">${pend.length}</span>`:""}</h3>
+      ${hechas?`<label class="note" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="faut-ver" ${autVerFact?"checked":""}> Ver también las ya facturadas (${hechas})</label>`:""}</div>
+    <div class="note">Apenas Ventas y Contabilidad autorizan un pedido, aparece aquí para facturarlo, sin esperar a que se cierre la ruta. Escriba el número de factura y queda marcada; cuando cierren la ruta, ya llega facturada.</div>
+    ${grupos||`<div class="note fdg-vacio">${hechas?"Todo lo autorizado ya está facturado.":"No hay pedidos autorizados por facturar. Cuando Ventas y Contabilidad den los dos checks, salen aquí al instante."}</div>`}`;
+  const cb=$("#faut-ver");if(cb)cb.onchange=()=>{autVerFact=cb.checked;renderAutFact()};
+}
 
  
 let xlsxCompleto=false;
