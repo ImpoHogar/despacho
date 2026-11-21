@@ -15,6 +15,66 @@ def rep(t, a, b, n=1):
     return t.replace(a, b)
 
 # ---------- estilos: todo queda encerrado dentro de la pestaña ----------
+# Colores: se toman los de Despacho (las variables de la página pasan dentro de la pestaña), así combina
+# con el resto de la herramienta y cambia solo entre modo claro y oscuro.
+raiz = re.search(r':root\{[\s\S]*?\}', css).group(0)
+css = css.replace(raiz, ''':root{
+  --card:var(--panel); --soft:var(--muted); --line2:var(--line);
+  --brand:var(--ink); --brand2:var(--accent); --acc:var(--accent); --info:var(--r1);
+  --okbg:color-mix(in srgb,var(--ok) 14%,var(--panel)); --warnbg:color-mix(in srgb,var(--warn) 14%,var(--panel));
+  --badbg:color-mix(in srgb,var(--bad) 14%,var(--panel)); --infobg:color-mix(in srgb,var(--r1) 12%,var(--panel));
+  --r:10px; --sh:none;
+  font-family:var(--body);
+}''', 1)
+COLORES = [
+    ('background:#fff', 'background:var(--panel)'),
+    ('#f6f8fb', 'var(--sunk)'), ('#f8fafc', 'var(--sunk)'), ('#eef1f5', 'var(--sunk)'), ('#e9edf2', 'var(--sunk)'),
+    ('#eceef1', 'var(--sunk)'), ('#f0f2f5', 'var(--line)'), ('#f8fbff', 'color-mix(in srgb,var(--accent) 7%,var(--panel))'),
+    ('#173f6b', 'var(--ink)'), ('#6b4600', 'var(--ink)'), ('#7f1d17', 'var(--ink)'), ('#14532d', 'var(--ink)'),
+    ('#efe7fd', 'color-mix(in srgb,var(--r3) 15%,var(--panel))'), ('#5b21b6', 'var(--r3)'), ('#7c3aed', 'var(--r3)'),
+    ('#374151', 'var(--muted)'), ('#4b5563', 'var(--muted)'), ('#6b7280', 'var(--muted)'),
+    ('background:#111827;color:#fff', 'background:var(--ink);color:var(--bg)'),
+]
+for a, b in COLORES:
+    if a not in css: raise SystemExit('No encontré el color ' + a)
+    css = css.replace(a, b)
+# Forma de Despacho: letras, pestañas, botones, tarjetas y números como en el resto de la herramienta
+css += '''
+/* ---- apariencia de Despacho y Rutas ---- */
+:host{background:transparent!important;border-radius:0!important;overflow:visible!important;font-size:16px!important}
+h1,h2,h3,.grande,.hoja h2,.modal h3,.seccion h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+header.top{background:transparent;color:var(--ink);border-bottom:1px solid var(--line);margin-bottom:16px}
+.top-in{padding:0 0 10px;max-width:none;gap:10px 16px}
+.marca{font-family:var(--display);font-size:26px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+.marca small{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--muted);opacity:1;margin-top:2px}
+.frescura{background:transparent;padding:0;font-size:14px;font-weight:600;border-radius:0;color:var(--ink)}
+.frescura::before{width:10px;height:10px;background:var(--muted)}
+.frescura.ok::before{background:var(--ok)}.frescura.warn::before{background:var(--warn)}.frescura.bad::before{background:var(--bad)}
+#quien{display:none}
+nav.tabs{padding:0 0 10px;max-width:none;gap:4px;flex-wrap:wrap;overflow:visible}
+nav.tabs button{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-family:var(--display);font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:6px 14px;min-height:40px}
+nav.tabs button.act{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+nav.tabs .badge{background:var(--accent);color:var(--accent-ink);font-family:var(--mono);font-size:12px;border-radius:99px;padding:0 7px;vertical-align:1px}
+main{max-width:none;padding:0 0 20px}
+.panel,.kpi,.tarjeta{border-radius:12px}
+.kpi{padding:10px 14px}
+.kpi .l{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.kpi .v{font-family:var(--display);font-size:34px;line-height:1.1}
+.kpi.act{outline:0;border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.traer b{font-family:var(--display);font-size:26px;color:var(--ink)}
+.btn{min-height:44px;padding:8px 16px;font-weight:600;background:var(--panel);border-color:var(--line)}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ok{color:#fff}
+.btn.peq{min-height:36px;padding:4px 10px;font-size:14px}
+.buscar input,.buscar select,.campo input,.campo select,.campo textarea{background:var(--sunk);border-color:var(--line);padding:11px 13px}
+.campo label{font-weight:600;color:var(--ink);font-size:14px}
+th{background:var(--sunk);text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.hoja{background:var(--panel);color:var(--ink)}
+.modal{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.cerrar{background:var(--sunk);color:var(--ink)}
+.chk label{background:var(--panel)}
+'''
 css = rep(css, ':root{', ':host{display:block;')
 css = rep(css, 'html,body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}',
           ':host{background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;border-radius:12px;overflow:hidden}')

@@ -1309,7 +1309,7 @@ function setTab(t){
   if(t==="inventario")abrirInventario();
 }
 /* ── Inventario (relleno de racks de Bodega): vive en inventario.js, aparte; si falla, solo falla esta pestaña ── */
-const INV_V="1";
+const INV_V="2";
 let invJs=null;
 const personasInventario=()=>personas().filter(p=>p.activo!==false&&p.usuario&&(permisosDe(p).inventario||permisosDe(p).ajustes))
   .map(p=>({usuario:String(p.usuario).toLowerCase(),nombre:p.nombre})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
