@@ -197,6 +197,19 @@ section[data-view]{display:grid;gap:20px}
 .chip small{font-weight:500;opacity:.85;margin-left:4px}
 .chip.hab{border-style:dashed}
 .note{font-size:14px;color:var(--muted)}
+.bt-fil{display:grid;grid-template-columns:repeat(2,minmax(130px,170px)) repeat(2,minmax(150px,1fr)) minmax(200px,1.4fr);gap:12px}
+.bt-fil .field input,.bt-fil .field select{font-size:16px;padding:10px 12px}
+@media (max-width:900px){.bt-fil{grid-template-columns:1fr 1fr}}
+.bt-tab{width:100%;border-collapse:collapse;font-size:15px}
+.bt-tab th{position:sticky;top:0;background:var(--sunk);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bt-tab td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.bt-tab tr:last-child td{border-bottom:0}
+.bt-dia td{background:var(--sunk);font-family:var(--display);font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:8px 12px}
+.bt-h{font-family:var(--mono);font-size:13px;white-space:nowrap;color:var(--muted)}
+.bt-q b{display:block}.bt-q small,.bt-det small{display:block;color:var(--muted);font-size:12px}
+.bt-mod{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;border:1.5px solid var(--c,var(--muted));color:var(--c,var(--muted));white-space:nowrap}
+.bt-acc{font-weight:600}.bt-hist{font-size:11px;color:var(--muted);font-style:italic}
+@media (max-width:760px){.bt-tab thead{display:none}.bt-tab tr:not(.bt-dia){display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:10px 12px;border-bottom:1px solid var(--line)}.bt-tab td{border:0;padding:0}.bt-tab td.bt-det{grid-column:1/-1}}
 #rx-who.ok{color:var(--ok);font-weight:700}#rx-who.bad{color:var(--bad);font-weight:600}
 .err{color:var(--bad);font-weight:600}
 .result{display:grid;justify-items:center;text-align:center;gap:10px;padding:28px 18px;border:2px dashed var(--line);border-radius:12px;min-height:260px;align-content:center}
@@ -692,6 +705,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
       <button class="tab" role="tab" data-tab="contab" id="t-contab">Contabilidad</button>
       <button class="tab" role="tab" data-tab="gps" id="t-gps">GPS</button>
       <button class="tab" role="tab" data-tab="reportes" id="t-reportes">Reportes</button>
+      <button class="tab" role="tab" data-tab="bitacora" id="t-bitacora">Bitácora de movimientos</button>
       <button class="tab" role="tab" data-tab="ajustes" id="t-ajustes">Ajustes</button>
     </nav>
     <div class="sess" id="sess"></div>
@@ -936,6 +950,32 @@ html:has(.kliq),.kliq{overflow-anchor:none}
   </section>
 
   <!-- AJUSTES -->
+  <section data-view="bitacora" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div><h2 style="font-size:30px">Bitácora de movimientos</h2>
+        <div class="note">Todo lo que se hace en la herramienta, quién lo hizo y cuándo: pedidos, aprobaciones, facturas, rutas, cierres, Contabilidad, clientes, usuarios e Inventario. Solo la ve el administrador.</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="bt-act">Actualizar</button><button class="btn dark" id="bt-xls">Descargar Excel</button></div>
+    </div>
+    <div class="panel" style="display:grid;gap:12px">
+      <div class="chips" id="bt-rango">
+        <button class="chip" style="--c:var(--ink)" data-r="hoy" aria-pressed="true">Hoy</button>
+        <button class="chip" style="--c:var(--ink)" data-r="ayer">Ayer</button>
+        <button class="chip" style="--c:var(--ink)" data-r="7">Últimos 7 días</button>
+        <button class="chip" style="--c:var(--ink)" data-r="mes">Este mes</button>
+        <button class="chip" style="--c:var(--ink)" data-r="30">Últimos 30 días</button>
+      </div>
+      <div class="bt-fil">
+        <div class="field"><label for="bt-desde">Desde</label><input type="date" id="bt-desde"></div>
+        <div class="field"><label for="bt-hasta">Hasta</label><input type="date" id="bt-hasta"></div>
+        <div class="field"><label for="bt-per">Persona</label><select id="bt-per"><option value="">Todas</option></select></div>
+        <div class="field"><label for="bt-mod">Módulo</label><select id="bt-mod"><option value="">Todos</option></select></div>
+        <div class="field"><label for="bt-q">Buscar</label><input id="bt-q" placeholder="Proforma, cliente, ruta, factura…" autocomplete="off"></div>
+      </div>
+    </div>
+    <div class="kpis" id="bt-kpis"></div>
+    <div class="panel" style="padding:0;overflow:hidden"><div id="bt-lista"><div class="note" style="padding:18px">Abriendo…</div></div></div>
+  </section>
+
   <section data-view="ajustes" hidden>
     <div class="panel" style="display:grid;gap:12px">
       <h2 style="font-size:26px">Configuración inicial</h2>
@@ -1196,7 +1236,7 @@ if(!["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"].inc
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","alisto","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
 const ROLES={jefe:["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"],facturacion:["recibir","facturar","estacion"],ventas:["recibir","rutas","estacion"],contabilidad:["recibir","rutas","estacion"]};
 const ROL_NOMBRE={jefe:"Jefe",facturacion:"Facturación",ventas:"Ventas",contabilidad:"Contabilidad"};
-const TAB_NOMBRE={gps:"GPS",hoy:"Hoy",recibir:"Recibir",alisto:"Alisto",inventario:"Inventario",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
+const TAB_NOMBRE={bitacora:"Bitácora de movimientos",gps:"GPS",hoy:"Hoy",recibir:"Recibir",alisto:"Alisto",inventario:"Inventario",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
 let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
   {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},{g:"Alisto",k:"alisto",t:"Ver prioridades de Alisto"},{g:"Inventario",k:"inventario",t:"Relleno de racks de Bodega"},
@@ -1213,11 +1253,11 @@ const personaPorClave=k=>{k=String(k||"").trim();return k&&!gas?personas().find(
 const tiene=(x,perm)=>!!(x&&permisosDe(x)[perm]);
 const yo=perm=>!!(sesion&&sesion.permisos&&sesion.permisos[perm]);
 const usPorClave=k=>personaPorClave(k);
-const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],ajustes:["ajustes"]};
+const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"]};
 const permitido=t=>gas?gasPermitido(t):localPermitido(t);
 const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar"],estacion:["registrar"]};
 function gasPermitido(t){if(!sesion)return false;if(yo("ajustes"))return true;return ((GAS_TAB[t]||TAB_PERM[t])||[]).some(yo)}
-const TAB_ORDEN=["hoy","recibir","alisto","inventario","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes"];
+const TAB_ORDEN=["hoy","recibir","alisto","inventario","aprobar","rutas","carga","facturar","contab","gps","reportes","bitacora","ajustes"];
 const primeraTab=()=>TAB_ORDEN.find(permitido)||"recibir";
 const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","aprobarC","liquidar","entregar","devoluciones"].some(yo);
 const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":yo("inventario")?"Bodega":"Usuario";
@@ -1307,7 +1347,161 @@ function setTab(t){
   render();
   if(t==="recibir")setTimeout(()=>$("#rx-prof").focus(),0);
   if(t==="inventario")abrirInventario();
+  if(t==="bitacora")abrirBitacora();
 }
+/* ── Bitácora de movimientos (solo el administrador): todo lo que se hace en la herramienta, quién y cuándo ──
+   Viene de tres lados: la hoja «bitacora» del servidor (desde que se activó), los movimientos de Inventario
+   (servidor del relleno) y, para lo anterior a la bitácora, lo que ya traía nombre guardado en cada pedido o ruta. */
+const BT={filas:[],inicio:0,invErr:"",cargando:false,listo:false,limite:false,pag:400};
+const BT_INV_API=window.INVENTARIO_API||"https://relleno-bodega.impoh.workers.dev";
+const BT_COL={Recibir:"var(--r1)",Ventas:"var(--r3)",Contabilidad:"var(--r2)","Facturación":"var(--r5)",Rutas:"var(--accent)",Carga:"var(--r4)",Ruteros:"var(--r4)",
+  "Entregas en bodega":"var(--r6)",Inventario:"var(--r6)",Pedidos:"var(--bad)",Devoluciones:"var(--warn)"};
+const BT_INV_MOV={"conteo-rack":"Corrigió el rack de la principal",traslado:"Trajo de bodega 2 a la principal","bajar-excedente":"Bajó de excedentes a la principal",conteo:"Corrigió por conteo",
+  ingreso:"Entró mercadería (Interakzion)",ubicar:"Ubicó un ingreso","directo-principal":"Acomodó un ingreso directo en la principal",alta:"Agregó una tarima"};
+const BT_INV_BIT={config:"Cambió la configuración del relleno",articulo:"Cambió un artículo","corregir-tarima":"Corrigió una tarima","crear-usuario":"Creó un usuario de Inventario","editar-usuario":"Cambió un usuario de Inventario",instalacion:"Instalación de Inventario"};
+const btN=(n,s)=>`${n} ${s}${Number(n)===1?"":"s"}`;
+const btIso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const btDeIso=v=>{const d=new Date(String(v||"")+"T00:00:00");return isNaN(d)?null:d};
+function btRango(r){
+  const h=new Date();h.setHours(0,0,0,0);const a=new Date(h);let b=new Date(h);
+  if(r==="ayer"){a.setDate(a.getDate()-1);b=new Date(a)}else if(r==="7")a.setDate(a.getDate()-6);else if(r==="30")a.setDate(a.getDate()-29);else if(r==="mes")a.setDate(1);
+  $("#bt-desde").value=btIso(a);$("#bt-hasta").value=btIso(b);
+  document.querySelectorAll("#bt-rango .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.r===r)));
+}
+function btHistoria(desde,hasta,limite){
+  const out=[],en=t=>t&&t>=desde&&t<hasta&&(!limite||t<limite);
+  const add=(ts,quien,modulo,accion,detalle)=>{if(en(ts))out.push({ts:Number(ts),quien:quien||"",modulo,accion,detalle:detalle||"",hist:true})};
+  const rn=id=>{const r=rutaById(id);return r?r.nombre:(id||"sin ruta")};
+  for(const o of Object.values(S.ordenes||{})){
+    if(!o||o.ejemplo)continue;
+    const lab=`Proforma ${o.proforma||"?"}${o.cliente?" · "+o.cliente:""}`;
+    add(o.recibido,o.alistador,"Recibir","Recibió un pedido",`${lab} · ${btN(o.bultos||0,"caja")}`);
+    const v=o.ventas||{};if(v.ts&&v.estado&&v.estado!=="pend")add(v.ts,v.por,"Ventas",v.estado==="ok"?"Aprobó en Ventas":v.estado==="bloqueado"?"Bloqueó en Ventas":"Ventas: "+v.estado,lab);
+    const c=o.conta||{};if(c.ts&&c.estado&&c.estado!=="pend")add(c.ts,c.por,"Contabilidad",c.estado==="ok"?"Aprobó en Contabilidad":c.estado==="retenido"?"Retuvo en Contabilidad":"Contabilidad: "+c.estado,lab+(c.motivo?" · "+c.motivo:""));
+    if(o.factura&&o.facturaTs)add(o.facturaTs,o.facturaPor,"Facturación","Facturó",`${lab} · factura ${o.factura}`);
+    if(o.pagado&&o.pagado.ts)add(o.pagado.ts,o.pagado.por,"Contabilidad","Registró un pago",`${lab}${o.pagado.forma?" · "+o.pagado.forma:""}`);
+    for(const m of (o.movimientos||[]))add(m.t,m.por,"Rutas","Movió el pedido de ruta",`${lab} · a ${rn(m.a)}`);
+    if(o.devueltoEn)add(o.devueltoEn,"","Rutas","Devolvió a bodega",lab+(o.motivoDevolucion?" · "+o.motivoDevolucion:""));
+  }
+  for(const c of Object.values(S.cierres||{})){
+    if(!c||c.ejemplo)continue;
+    const r=c.rutaNombre||rn(c.ruta),n=(c.items||[]).length,L=c.liq||{};
+    if(c.tipo==="bodega")add(c.fecha,(c.resp||{}).nombre,"Entregas en bodega","Entregó en bodega",`${c.cliente||""}${c.retira?" · retiró "+c.retira:""}`);
+    else if(c.tipo==="cobrobodega")add(L.cerradaTs||c.fecha,L.por,"Contabilidad","Cerró el cobro de entregas en bodega",`${(c.resp||{}).nombre||""} · ${btN(n,"pedido")}`);
+    else{
+      add(c.fecha,"","Rutas","Cerró la ruta",`${r} · ${btN(n,"pedido")} · ${btN(c.totalBultos||0,"caja")}${c.ruteroNombre?" · chofer "+c.ruteroNombre:""}`);
+      if(c.carga&&c.carga.ok)add(c.carga.ts,c.carga.por,"Carga","Cerró la carga del camión",r);
+      if(c.salida)add(c.salida,"","Rutas","Despachó la ruta (salió el camión)",r);
+      if(L.estado==="cerrada")add(L.cerradaTs,L.por,"Contabilidad","Cerró la ruta con el chofer",r+(L.chofer?" · chofer "+L.chofer:""));
+      else if(L.estado==="omitida")add(L.ts,L.por,"Contabilidad","Omitió el cierre con el chofer",r);
+    }
+  }
+  return out;
+}
+function btResumen(t){
+  let d=t;try{d=JSON.parse(t)}catch(e){}
+  if(d&&typeof d==="object"){const p=[];for(const k of Object.keys(d).slice(0,6)){const v=d[k];if(v===null||typeof v==="object")continue;p.push(`${k}: ${v}`)}return p.join(" · ").slice(0,240)}
+  return String(t||"").slice(0,240);
+}
+async function btInventario(desde,hasta){
+  const f=ms=>new Date(ms).toISOString().slice(0,19).replace("T"," ");
+  const r=await fetch(`${BT_INV_API}/api/bitacora-general?desde=${encodeURIComponent(f(desde))}&hasta=${encodeURIComponent(f(hasta))}`,{headers:{Authorization:"Despacho "+gasToken},cache:"no-store",credentials:"omit"});
+  if(!r.ok)throw new Error(r.status===403?"sin permiso":"respuesta "+r.status);
+  const d=await r.json(),ts=x=>Date.parse(String(x).replace(" ","T")+"Z");
+  const fx=n=>{const v=Math.round(Number(n)*10)/10;return isFinite(v)?v.toLocaleString("es-CR"):""};
+  const cant=m=>{if(m.cantidad==null||m.tipo==="ubicar")return"";const uc=Number(m.unid_caja)||1;return `${fx(m.cantidad)} unidades${uc>1?` (${fx(m.cantidad/uc)} cajas)`:""}`};
+  return [
+    ...(d.movimientos||[]).map(m=>({ts:ts(m.fecha),quien:m.usuario==="conector"?"Interakzion (automático)":(m.nombre||m.usuario||""),modulo:"Inventario",accion:BT_INV_MOV[m.tipo]||m.tipo,
+      detalle:[m.descripcion||m.codigo,cant(m),m.tarima?"tarima "+m.tarima:"",m.ubicacion?"ubicación "+m.ubicacion:"",m.nota||""].filter(Boolean).join(" · ")})),
+    ...(d.bitacora||[]).map(b=>({ts:ts(b.fecha),quien:b.nombre||b.usuario||"",modulo:"Inventario",accion:BT_INV_BIT[b.accion]||b.accion,detalle:btResumen(b.detalle)}))
+  ];
+}
+async function btCargar(){
+  const box=$("#bt-lista");if(!box)return;
+  if(!gas||!gasToken){box.innerHTML=`<div class="note" style="padding:18px">La bitácora necesita entrar con su usuario y contraseña (versión en línea).</div>`;return}
+  const a=btDeIso($("#bt-desde").value),b=btDeIso($("#bt-hasta").value);
+  if(!a||!b){toast("Revise las fechas");return}
+  const desde=a.getTime(),hb=new Date(b);hb.setDate(hb.getDate()+1);const hasta=hb.getTime();
+  if(hasta<=desde){toast("La fecha «hasta» debe ser después de «desde»");return}
+  BT.cargando=true;BT.pag=400;box.innerHTML=`<div class="note" style="padding:18px">Buscando movimientos…</div>`;
+  const [srv,inv]=await Promise.allSettled([gcall("apiBitacora",gasToken,desde,hasta,gasActor),btInventario(desde,hasta)]);
+  BT.cargando=false;
+  let filas=[];
+  if(srv.status==="fulfilled"&&srv.value&&srv.value.ok!==false){
+    BT.inicio=Number(srv.value.inicio)||0;BT.limite=!!srv.value.limite;
+    filas=(srv.value.filas||[]).map(x=>({...x,ts:Number(x.ts)}));
+  }else{
+    const e=srv.status==="fulfilled"?srv.value:srv.reason;
+    box.innerHTML=`<div class="note" style="padding:18px">No se pudo leer la bitácora: ${esc(ERR_TXT[e&&(e.error||e.code)]||(e&&(e.detalle||e.error||e.code))||"error")}.</div>`;return;
+  }
+  BT.invErr=inv.status==="fulfilled"?"":String(inv.reason&&inv.reason.message||inv.reason||"sin conexión");
+  if(inv.status==="fulfilled")filas=filas.concat(inv.value);
+  filas=filas.concat(btHistoria(desde,hasta,BT.inicio));
+  filas.sort((x,y)=>y.ts-x.ts);
+  BT.filas=filas;BT.listo=true;
+  const per=$("#bt-per"),mod=$("#bt-mod"),vp=per.value,vm=mod.value;
+  const nombres=[...new Set(filas.map(f=>f.quien).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+  const mods=[...new Set(filas.map(f=>f.modulo).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+  per.innerHTML=`<option value="">Todas</option>`+nombres.map(n=>`<option${n===vp?" selected":""}>${esc(n)}</option>`).join("");
+  mod.innerHTML=`<option value="">Todos</option>`+mods.map(n=>`<option${n===vm?" selected":""}>${esc(n)}</option>`).join("");
+  btPintar();
+}
+function btFiltradas(){
+  const p=$("#bt-per").value,m=$("#bt-mod").value,q=norm($("#bt-q").value||"").trim();
+  return BT.filas.filter(f=>(!p||f.quien===p)&&(!m||f.modulo===m)&&(!q||norm(`${f.quien} ${f.sesion||""} ${f.modulo} ${f.accion} ${f.detalle}`).includes(q)));
+}
+function btPintar(){
+  const box=$("#bt-lista");if(!box||!BT.listo)return;
+  const fs=btFiltradas();
+  const personasN=new Set(fs.map(f=>f.quien).filter(Boolean)).size;
+  const cuenta=k=>fs.filter(f=>f.modulo===k).length;
+  $("#bt-kpis").innerHTML=[["Movimientos",fs.length],["Personas",personasN],["Pedidos recibidos",fs.filter(f=>f.accion==="Recibió un pedido").length],
+    ["Aprobaciones",fs.filter(f=>/^Aprobó/.test(f.accion)).length],["Facturas",fs.filter(f=>f.accion==="Facturó").length],["Inventario",cuenta("Inventario")]]
+    .map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v.toLocaleString("es-CR")}</div></div>`).join("");
+  const avisos=[];
+  if(BT.invErr)avisos.push(`No se pudieron traer los movimientos de Inventario (${esc(BT.invErr)}). Lo demás sí está.`);
+  if(BT.limite)avisos.push("Hay demasiados movimientos en ese rango: se muestran los 6.000 más recientes. Escoja menos días para ver todo.");
+  if(fs.some(f=>f.hist))avisos.push(`Las filas marcadas «registro anterior» son de antes de que existiera la bitácora${BT.inicio?` (${new Date(BT.inicio).toLocaleDateString("es-CR",{day:"numeric",month:"long"})})`:""}: salen de lo que ya tenía nombre guardado en cada pedido o ruta.`);
+  if(!fs.length){box.innerHTML=(avisos.length?`<div class="note" style="padding:12px 14px;border-bottom:1px solid var(--line)">${avisos.join("<br>")}</div>`:"")+`<div class="note" style="padding:18px">No hay movimientos con esos filtros.</div>`;return}
+  const ver=fs.slice(0,BT.pag);let dia="",filas="";
+  for(const f of ver){
+    const d=new Date(f.ts),k=btIso(d);
+    if(k!==dia){dia=k;filas+=`<tr class="bt-dia"><td colspan="5">${esc(d.toLocaleDateString("es-CR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))}</td></tr>`}
+    filas+=`<tr><td class="bt-h">${esc(d.toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit",hour12:true}))}</td>
+      <td class="bt-q"><b>${esc(f.quien||"—")}</b>${f.sesion?`<small>en la sesión de ${esc(f.sesion)}</small>`:""}</td>
+      <td><span class="bt-mod" style="--c:${BT_COL[f.modulo]||"var(--muted)"}">${esc(f.modulo||"")}</span></td>
+      <td class="bt-acc">${esc(f.accion||"")}${f.hist?`<div class="bt-hist">registro anterior</div>`:""}</td>
+      <td class="bt-det">${esc(f.detalle||"")}</td></tr>`;
+  }
+  box.innerHTML=(avisos.length?`<div class="note" style="padding:12px 14px;border-bottom:1px solid var(--line)">${avisos.join("<br>")}</div>`:"")+
+    `<div style="overflow-x:auto"><table class="bt-tab"><thead><tr><th>Hora</th><th>Quién</th><th>Módulo</th><th>Qué hizo</th><th>Detalle</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    (fs.length>ver.length?`<div style="padding:12px;text-align:center"><button class="btn" id="bt-mas">Ver ${Math.min(400,fs.length-ver.length)} más (quedan ${fs.length-ver.length})</button></div>`:"");
+  const mas=$("#bt-mas");if(mas)mas.onclick=()=>{BT.pag+=400;btPintar()};
+}
+async function btExcel(){
+  if(!BT.listo){toast("Primero cargue la bitácora");return}
+  if(!await cargarXLSX()){toast("Para hacer el Excel hace falta internet");return}
+  const fs=btFiltradas();
+  const filas=fs.map(f=>{const d=new Date(f.ts);return [btIso(d),d.toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit",hour12:false}),f.quien||"",f.sesion||"",f.modulo||"",f.accion||"",f.detalle||"",f.hist?"Registro anterior":""]});
+  const ws=XLSX.utils.aoa_to_sheet([["Fecha","Hora","Quién","En la sesión de","Módulo","Qué hizo","Detalle","Nota"],...filas]);
+  ws["!cols"]=[12,8,24,20,18,34,70,16].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Bitácora");
+  XLSX.writeFile(wb,`Bitácora de movimientos ${$("#bt-desde").value} a ${$("#bt-hasta").value}.xlsx`);
+}
+let btIniciado=false;
+function abrirBitacora(){
+  if(!btIniciado){
+    btIniciado=true;btRango("hoy");
+    $("#bt-rango").addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;btRango(c.dataset.r);btCargar()});
+    ["#bt-desde","#bt-hasta"].forEach(s=>$(s).addEventListener("change",()=>{document.querySelectorAll("#bt-rango .chip").forEach(c=>c.setAttribute("aria-pressed","false"));btCargar()}));
+    ["#bt-per","#bt-mod"].forEach(s=>$(s).addEventListener("change",()=>{BT.pag=400;btPintar()}));
+    let tq=null;$("#bt-q").addEventListener("input",()=>{clearTimeout(tq);tq=setTimeout(()=>{BT.pag=400;btPintar()},200)});
+    $("#bt-act").addEventListener("click",btCargar);
+    $("#bt-xls").addEventListener("click",btExcel);
+  }
+  if(!BT.cargando)btCargar();
+}
+
 /* ── Inventario (relleno de racks de Bodega): vive en inventario.js, aparte; si falla, solo falla esta pestaña ── */
 const INV_V="2";
 let invJs=null;
@@ -3373,7 +3567,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-formato]")){e.p
 
  
 const TAB_LOCAL={alisto:["alisto"],inventario:["inventario"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
-  facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],ajustes:["ajustes"],estacion:["registrar"]};
+  facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"],estacion:["registrar"]};
 function localPermitido(t){
   if(t==="estacion"&&!standalone&&!sesion)return true;   
   if(!sesion)return false;
