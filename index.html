@@ -197,6 +197,8 @@ section[data-view]{display:grid;gap:20px}
 .chip small{font-weight:500;opacity:.85;margin-left:4px}
 .chip.hab{border-style:dashed}
 .note{font-size:14px;color:var(--muted)}
+.ap2 .ap-vnota{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);font-size:15px}
+.ap2 .ap-vfecha{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)}
 .ia-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:99px;border:1.5px solid var(--ok);color:var(--ok);vertical-align:1px}
 .ia-val{font-weight:600}.ia-aviso{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.ia-aviso.warn{border-color:var(--warn);color:var(--ink)}
 .bt-fil{display:grid;grid-template-columns:repeat(2,minmax(130px,170px)) repeat(2,minmax(150px,1fr)) minmax(200px,1.4fr);gap:12px}
@@ -704,7 +706,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
       <button class="tab" role="tab" data-tab="rutas" id="t-rutas">Rutas</button>
       <button class="tab" role="tab" data-tab="carga" id="t-carga">Ruteros</button>
       <button class="tab" role="tab" data-tab="facturar" id="t-facturar">Facturación</button>
-      <button class="tab" role="tab" data-tab="contab" id="t-contab">Contabilidad</button>
+      <button class="tab" role="tab" data-tab="contab" id="t-contab" style="display:none">Contabilidad</button>
       <button class="tab" role="tab" data-tab="gps" id="t-gps">GPS</button>
       <button class="tab" role="tab" data-tab="reportes" id="t-reportes">Reportes</button>
       <button class="tab" role="tab" data-tab="bitacora" id="t-bitacora">Bitácora de movimientos</button>
@@ -839,26 +841,27 @@ html:has(.kliq),.kliq{overflow-anchor:none}
 
   <!-- APROBACIONES -->
   <section data-view="aprobar" hidden>
-    <div><h2 style="font-size:30px">Aprobaciones para despacho</h2>
-      <div class="note">Ventas confirma que el pedido se puede enviar y anota la fecha si el cliente la pidió. Contabilidad confirma que el cliente puede recibir o lo retiene. Al cerrar una ruta solo salen los pedidos con las dos aprobaciones.</div></div>
-    <div class="panel" style="display:grid;gap:12px">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <div class="chips" id="ap-filtros">
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="mio">Pendientes de mi parte</button>
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="ventas">Falta Ventas</button>
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="conta">Falta Contabilidad</button>
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="ret">Retenidos</button>
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="listos">Listos</button>
-          <button type="button" class="chip" style="--c:var(--ink)" data-af="todos">Todos</button>
-        </div>
-        <select id="ap-ruta" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)" aria-label="Ruta"></select>
-        <input id="ap-q" type="search" placeholder="Buscar cliente o proforma" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div><h2 style="font-size:30px">Aprobación de Ventas y Contabilidad</h2><div class="note" id="ap-nota"></div></div>
+      <div class="chips" id="ap-vista" hidden>
+        <button type="button" class="chip" style="--c:var(--ink)" data-av="prof">Proformas por autorizar</button>
+        <button type="button" class="chip" style="--c:var(--ink)" data-av="conta">Rutas, choferes y cobros</button>
       </div>
-      <div id="ap-ret"></div>
     </div>
-    <div class="panel" style="display:grid;gap:8px">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center"><div class="note" id="ap-sum"></div><div id="ap-bulk" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
-      <div id="ap-list"></div>
+    <div id="ap-prof" style="display:grid;gap:16px">
+      <div class="panel" style="display:grid;gap:12px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <div class="chips" id="ap-filtros"></div>
+          <select id="ap-dep" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)" aria-label="Departamento"><option value="">Perfumería y Bodega</option><option value="P">Perfumería</option><option value="B">Bodega</option></select>
+          <select id="ap-ruta" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)" aria-label="Ruta"></select>
+          <input id="ap-q" type="search" placeholder="Buscar cliente o proforma" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)">
+        </div>
+        <div id="ap-ret"></div>
+      </div>
+      <div class="panel" style="display:grid;gap:8px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center"><div class="note" id="ap-sum"></div><div id="ap-bulk" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+        <div id="ap-list"></div>
+      </div>
     </div>
   </section>
 
@@ -1129,7 +1132,7 @@ const esBodega=id=>{const r=S.rutas.find(x=>x.id===id);return !!(r&&r.tipo==="bo
 const esCobroB=c=>!!c&&c.tipo==="cobrobodega";
 const DEFAULT_RUTAS=conBodega([1,2,3,4,5].map(i=>({id:"R"+i,nombre:"Ruta "+i,estante:"ABCDE"[i-1],capacidad:100,posiciones:30})));
 let rutasRevisado=false, opcionesGuardadas=false;
-const S={rutas:DEFAULT_RUTAS,clientes:{},ordenes:{},cierres:{},alistadores:{},usuarios:{},etiquetas:{},cxc:{},tareas:{},talonarios:{},devgar:{},opciones:{etiquetaModo:"orden"}};
+const S={rutas:DEFAULT_RUTAS,clientes:{},ordenes:{},cierres:{},alistadores:{},usuarios:{},etiquetas:{},cxc:{},tareas:{},talonarios:{},devgar:{},aprob:{},opciones:{etiquetaModo:"orden"}};
 let rev=null, modoEstacion=false, estacionHace=null, standalone=location.protocol==="file:";
  
 const gas=!!(window.google&&google.script&&google.script.run);
@@ -1159,7 +1162,7 @@ function cargarLocal(){try{const d=JSON.parse(localStorage.getItem(LS_KEY)||"nul
   rutasRevisado=!!d.rutasRevisado;opcionesGuardadas=!!d.opcionesGuardadas}catch(e){}}
 
  
-const MAP={clientes:"clientes",ordenes:"ordenes",cierres:"cierres",alistadores:"alistadores",usuarios:"usuarios",etiquetas:"etiquetas",cxc:"cxc",tareas:"tareas",talonarios:"talonarios",devgar:"devgar"};
+const MAP={clientes:"clientes",ordenes:"ordenes",cierres:"cierres",alistadores:"alistadores",usuarios:"usuarios",etiquetas:"etiquetas",cxc:"cxc",tareas:"tareas",talonarios:"talonarios",devgar:"devgar",aprob:"aprob"};
 async function api(ops){
   if(gas){
     if(ops.some(o=>o.col==="usuarios"||o.col==="alistadores"||o.col==="config")){
@@ -1239,7 +1242,7 @@ if(!["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"].inc
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(["recibir","alisto","aprobar","rutas","carga","facturar","contab","gps","reportes","ajustes","estacion"].includes(h)&&h!==tab)setTab(h)});
 const ROLES={jefe:["recibir","aprobar","rutas","facturar","reportes","ajustes","estacion"],facturacion:["recibir","facturar","estacion"],ventas:["recibir","rutas","estacion"],contabilidad:["recibir","rutas","estacion"]};
 const ROL_NOMBRE={jefe:"Jefe",facturacion:"Facturación",ventas:"Ventas",contabilidad:"Contabilidad"};
-const TAB_NOMBRE={bitacora:"Bitácora de movimientos",gps:"GPS",hoy:"Hoy",recibir:"Recibir",alisto:"Alisto",inventario:"Inventario",aprobar:"Ventas",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
+const TAB_NOMBRE={bitacora:"Bitácora de movimientos",gps:"GPS",hoy:"Hoy",recibir:"Recibir",alisto:"Alisto",inventario:"Inventario",aprobar:"Aprobación de Ventas y Contabilidad",rutas:"Rutas",carga:"Ruteros",facturar:"Facturación",contab:"Contabilidad",reportes:"Reportes",ajustes:"Ajustes",estacion:"Estación de impresión"};
 let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
   {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},{g:"Alisto",k:"alisto",t:"Ver prioridades de Alisto"},{g:"Inventario",k:"inventario",t:"Relleno de racks de Bodega"},
@@ -1256,11 +1259,11 @@ const personaPorClave=k=>{k=String(k||"").trim();return k&&!gas?personas().find(
 const tiene=(x,perm)=>!!(x&&permisosDe(x)[perm]);
 const yo=perm=>!!(sesion&&sesion.permisos&&sesion.permisos[perm]);
 const usPorClave=k=>personaPorClave(k);
-const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"]};
+const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV","aprobarC","liquidar"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"]};
 const permitido=t=>gas?gasPermitido(t):localPermitido(t);
 const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar"],estacion:["registrar"]};
 function gasPermitido(t){if(!sesion)return false;if(yo("ajustes"))return true;return ((GAS_TAB[t]||TAB_PERM[t])||[]).some(yo)}
-const TAB_ORDEN=["hoy","recibir","alisto","inventario","aprobar","rutas","carga","facturar","contab","gps","reportes","bitacora","ajustes"];
+const TAB_ORDEN=["hoy","recibir","alisto","inventario","aprobar","rutas","carga","facturar","gps","reportes","bitacora","ajustes"];
 const primeraTab=()=>TAB_ORDEN.find(permitido)||"recibir";
 const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","aprobarC","liquidar","entregar","devoluciones"].some(yo);
 const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":yo("inventario")?"Bodega":"Usuario";
@@ -1338,15 +1341,17 @@ function pedirClave(target){
   setTimeout(()=>{const i=$("#lg-pin");i.focus();i.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();entrar()}}},0);
 }
 function setTab(t){
+  if(t==="contab"){apVista="conta";t="aprobar"}
   if(t!=="carga")salirCarga();
   if(t!=="inventario"&&window.InventarioModulo){try{InventarioModulo.ocultar()}catch(e){}}
   if(t!=="gps"){clearTimeout(gpsT);gpsIniciado=false}
-  if(t!=="contab"&&liqT&&liqCid)liqGuardar(liqCid);
+  if(!(t==="aprobar"&&apVista==="conta")&&liqT&&liqCid)liqGuardar(liqCid);
   if(!permitido(t)){if(gas)pedirClave(t);else if(!sesion)pantallaEntrada();else toast(`${sesion.nombre} no tiene acceso a ${TAB_NOMBRE[t]||t}.`);return}
   tab=t;if(t!=="estacion")lsSet("despacho.tab",t);
   modoEstacion=t==="estacion";if(location.hash.slice(1)!==t){try{history.replaceState(null,"","#"+t)}catch(e){}}
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
   document.querySelectorAll("section[data-view]").forEach(s=>s.hidden=s.dataset.view!==t);
+  if(t==="aprobar"){const cs=$('section[data-view="contab"]');if(cs)cs.hidden=!(apVista==="conta"&&verConta());iaRefrescar(true)}
   render();
   if(t==="recibir")setTimeout(()=>$("#rx-prof").focus(),0);
   if(t==="inventario")abrirInventario();
@@ -1549,11 +1554,11 @@ function render(){
   avisarAutorizados();
   const porCont=cargasPend().filter(c=>!cargaOk(c)).length;
   $("#t-carga").innerHTML="Ruteros"+(porCont?`<span class="count">${porCont}</span>`:"");
-  const nka=kaPendientes();$("#t-contab").innerHTML="Contabilidad"+(nka?`<span class="count">${nka}</span>`:"");
+  const nka=verConta()?kaPendientes():0;
   const nb=enBodega().length;
   const npa=enBodega().filter(o=>!listo(o)).length;
   const npv=enBodega().filter(o=>estV(o)==="pend").length;
-  const ta=$("#t-aprobar");if(ta)ta.innerHTML="Ventas"+(npv?`<span class="count">${npv}</span>`:"");
+  const ta=$("#t-aprobar");if(ta){const nap=apPendientesN()+(verConta()?porLiquidar().length+bodResps().length:0);ta.innerHTML="Ventas y Contabilidad"+(nap?`<span class="count">${nap}</span>`:"")}
   $("#t-rutas").innerHTML="Rutas"+(nb?`<span class="count" style="background:var(--ink);color:var(--bg)">${nb}</span>`:"");
   renderDatalists();
   renderSesion();
@@ -1561,7 +1566,7 @@ function render(){
   if(tab==="rutas")renderBoard();
   if(tab==="facturar")renderFact();
   if(tab==="carga")renderCarga();
-  if(tab==="contab")renderContab();
+  if(tab==="aprobar"&&apVista==="conta"&&verConta())renderContab();
   if(tab==="ajustes"){renderAjustes();renderAjustesCalle();renderRespaldo()}
   if(tab==="reportes")actualizarReportes(false);
   if(tab==="hoy")renderTablero();
@@ -1629,7 +1634,7 @@ async function iaRefrescar(force){
   if(!force&&Date.now()-IA.t<50000)return;
   IA.cargando=true;
   try{const r=await gcall("apiInteraIndice",gasToken,gasActor);
-    if(r&&r.ok&&r.ts){const m={};(r.p||[]).forEach(x=>{const k=String(x.n);(m[k]=m[k]||[]).push(x)});const antes=iaVivo();IA.p=m;IA.ts=r.ts;IA.t=Date.now();IA.off=false;if(tab==="recibir")iaAplicar();if(tab==="alisto")renderAlisto();if(tab==="facturar"&&antes!==iaVivo())renderFact()}
+    if(r&&r.ok&&r.ts){const m={};(r.p||[]).forEach(x=>{const k=String(x.n);(m[k]=m[k]||[]).push(x)});const antes=iaVivo();IA.p=m;IA.ts=r.ts;IA.t=Date.now();IA.off=false;if(tab==="recibir")iaAplicar();if(tab==="alisto")renderAlisto();if(tab==="facturar"&&antes!==iaVivo())renderFact();if(tab==="aprobar")renderAprobar()}
     else{IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}}
   catch(e){IA.t=Date.now();IA.off=true;if(tab==="recibir")iaAplicar()}finally{IA.cargando=false}}
 const iaCod=x=>x.d==="P"?"P"+x.c:String(x.c);
@@ -1658,7 +1663,7 @@ function iaAplicar(elegido){
 }
 $("#rx-prof").addEventListener("input",()=>{clearTimeout(rxIaT);rxIaT=setTimeout(()=>iaAplicar(),180)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ia-dep]");if(b)iaAplicar(b.dataset.iaDep)});
-setInterval(()=>{if(tab==="recibir"||tab==="facturar")iaRefrescar()},15000);
+setInterval(()=>{if(tab==="recibir"||tab==="facturar"||tab==="aprobar")iaRefrescar()},15000);
 /* ---------- Alisto: prioridades por hora de salida de cada ruta ---------- */
 const alHoy=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
 const AL_DN=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
@@ -3594,7 +3599,7 @@ async function descargarFormato(){
 document.addEventListener("click",e=>{if(e.target.closest("[data-formato]")){e.preventDefault();descargarFormato()}});
 
  
-const TAB_LOCAL={alisto:["alisto"],inventario:["inventario"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
+const TAB_LOCAL={alisto:["alisto"],inventario:["inventario"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV","aprobarC","liquidar"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
   facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"],estacion:["registrar"]};
 function localPermitido(t){
   if(t==="estacion"&&!standalone&&!sesion)return true;   
@@ -7168,74 +7173,205 @@ $("#demo-off").addEventListener("click",async()=>{
 });
 
  
-const reqV=()=>S.opciones.reqVentas!==false, reqC=()=>S.opciones.reqConta!==false;
+const reqV=()=>false, reqC=()=>S.opciones.reqConta!==false;   // Ventas ya no autoriza: solo pone detalle (Perfumería)
 const cliRet=o=>{const c=o.clienteId&&S.clientes[o.clienteId];return c&&c.retenido?c.retenido:null};
 const estV=o=>o.ventas&&o.ventas.estado==="bloqueado"?"ret":(!reqV()||(o.ventas&&o.ventas.estado==="ok")?"ok":"pend");
 function bloqueo(o){
   const cr=cliRet(o);if(cr)return {depto:"Contabilidad",motivo:"Cliente retenido · "+(cr.motivo||""),por:cr.por};
-  if(o.conta&&o.conta.estado==="retenido")return {depto:"Contabilidad",motivo:o.conta.motivo||"",por:o.conta.por};
+  {const cc=conDe(o);if(cc&&cc.estado==="retenido")return {depto:"Contabilidad",motivo:cc.motivo||"",por:cc.por}}
   if(o.ventas&&o.ventas.estado==="bloqueado")return {depto:"Ventas",motivo:o.ventas.motivo||"",por:o.ventas.por};
   return null;
 }
-const estC=o=>cliRet(o)||(o.conta&&o.conta.estado==="retenido")?"ret":(!reqC()||(o.conta&&o.conta.estado==="ok")?"ok":"pend");
-const fechaOk=o=>!(o.ventas&&o.ventas.fecha)||o.ventas.fecha<=ymd(Date.now());
+const estC=o=>{const cc=conDe(o);return cliRet(o)||(cc&&cc.estado==="retenido")?"ret":(!reqC()||(cc&&cc.estado==="ok")?"ok":"pend")};
+const fechaOk=o=>{const v=venDe(o);return !(v&&v.fecha)||v.fecha<=ymd(Date.now())};
 const listo=o=>estV(o)==="ok"&&estC(o)==="ok"&&fechaOk(o);
 const MOT_RET=["Cuenta pendiente de pago","Límite de crédito excedido","Cheque devuelto","Falta documento","Otro"];
 let apFiltro=null;
 const canV=()=>yo("aprobarV");
 const canC=()=>yo("aprobarC");
+/* ── Aprobación de Ventas y Contabilidad ──
+   Las proformas entran solas desde Interakzion (las que todavía no se facturan), aunque no se hayan
+   registrado en Recibir. Ventas (solo Perfumería) pone el detalle; Contabilidad autoriza o retiene.
+   Lo que se decide aquí queda en la ficha «aprob» de la proforma y pasa solo al pedido cuando se registra. */
+let apVista="prof",apCache=new Map();
+const verConta=()=>yo("aprobarC")||yo("liquidar")||yo("ajustes");
+const puedeAutorizar=()=>yo("aprobarC")||yo("ajustes");
+const esVentasSolo=()=>yo("aprobarV")&&!verConta();
+const IA_VIVOS=/^(Proformado|En Alisto|Chequeo|En Chequeo|Listo)/i;
+const depDe=o=>o.depto==="P"||o.depto==="B"?o.depto:(/^P\d/.test(String(o.clienteCodigo||""))?"P":(/^\d/.test(String(o.clienteCodigo||""))?"B":""));
+const apKeyOrden=o=>{const n=String(o.proforma||"").trim().replace(/^0+/,""),d=depDe(o);if(d)return d+"_"+n;const P=(S.aprob||{})["P_"+n],B=(S.aprob||{})["B_"+n];return P&&!B?"P_"+n:B&&!P?"B_"+n:""};
+const apDe=o=>{const k=apKeyOrden(o);return k?(S.aprob||{})[k]||null:null};
+const venDe=o=>(o.ventas&&(o.ventas.nota||o.ventas.fecha))?o.ventas:((apDe(o)||{}).ventas||null);
+const conDe=o=>(o.conta&&o.conta.estado&&o.conta.estado!=="pend")?o.conta:((apDe(o)||{}).conta||o.conta||null);
+const DEP_TXT={P:"Perfumería",B:"Bodega"};
+function apItems(){
+  const out=new Map(),cliCod={};
+  for(const c of Object.values(S.clientes))if(c.codigo)cliCod[String(c.codigo)]=c;
+  for(const lst of Object.values(IA.p||{}))for(const x of lst){
+    if(!IA_VIVOS.test(String(x.e||""))||(x.fa&&x.fa!=="0"))continue;
+    const k=x.d+"_"+x.n;
+    out.set(k,{k,dep:x.d,n:String(x.n),cod:iaCod(x),nm:x.nm||"",e:String(x.e||""),f:x.f||"",h:x.h||"",cj:Number(x.cj)||0,mo:Number(x.mo)||0,o:null});
+  }
+  for(const o of Object.values(S.ordenes)){
+    if(o.ejemplo||o.estado!=="bodega"||o.devuelto||String(o.factura||"").trim())continue;
+    const n=String(o.proforma||"").trim().replace(/^0+/,"");if(!n)continue;
+    let k=apKeyOrden(o);if(!k)k=out.has("P_"+n)&&!out.has("B_"+n)?"P_"+n:"B_"+n;
+    const it=out.get(k)||{k,dep:k[0],n,cod:o.clienteCodigo||"",nm:o.cliente||"",e:"",f:"",h:"",cj:Number(o.bultos)||0,mo:Number(o.monto)||0};
+    it.o=o;if(!it.mo&&Number(o.monto))it.mo=Number(o.monto);out.set(k,it);
+  }
+  for(const it of out.values()){
+    it.cli=cliPorCodigo(cliCod,it.cod)||(it.o&&it.o.clienteId?S.clientes[it.o.clienteId]:null)||null;
+    it.nombre=it.cli?it.cli.nombre:(it.o?it.o.cliente:it.nm);
+    it.ruta=it.o&&it.o.ruta?it.o.ruta:(it.cli?it.cli.ruta:"");
+    const ap=(S.aprob||{})[it.k]||null;it.ap=ap;
+    it.ven=(ap&&ap.ventas&&(ap.ventas.nota||ap.ventas.fecha))?ap.ventas:(it.o&&it.o.ventas&&(it.o.ventas.nota||it.o.ventas.fecha)?it.o.ventas:null);
+    it.con=(it.o&&it.o.conta&&it.o.conta.estado&&it.o.conta.estado!=="pend")?it.o.conta:(ap&&ap.conta)||null;
+    const cr=it.cli&&it.cli.retenido;
+    it.est=cr||(it.con&&it.con.estado==="retenido")?"ret":(it.con&&it.con.estado==="ok")?"ok":"pend";
+    it.cliRet=cr||null;
+  }
+  apCache=out;return [...out.values()];
+}
+const cliPorCodigo=(m,cod)=>cod?m[String(cod)]||null:null;
+function apFiltroDef(){return esVentasSolo()?"sindet":"pend"}
 function apVisibles(){
-  const f=apFiltro||(sesion&&sesion.rol==="ventas"?"ventas":sesion&&sesion.rol==="contabilidad"?"conta":"mio");
-  const q=norm($("#ap-q").value),r=$("#ap-ruta").value;
-  return enBodega().filter(o=>{
-    if(r&&(o.ruta||"")!==(r==="_"?"":r))return false;
-    if(q&&!norm(o.cliente).includes(q)&&!norm(o.proforma).includes(q)&&!norm(o.clienteCodigo).includes(q))return false;
-    const v=estV(o),c=estC(o);
-    if(f==="ventas")return v==="pend";
-    if(f==="conta")return c==="pend";
-    if(f==="ret")return c==="ret"||v==="ret";
-    if(f==="listos")return listo(o);
-    if(f==="mio")return sesion&&sesion.rol==="ventas"?v==="pend":sesion&&sesion.rol==="contabilidad"?c==="pend":!listo(o);
+  const f=apFiltro||apFiltroDef();
+  const q=norm($("#ap-q").value),r=$("#ap-ruta").value,dp=esVentasSolo()?"P":$("#ap-dep").value;
+  return apItems().filter(it=>{
+    if(dp&&it.dep!==dp)return false;
+    if(r&&(it.ruta||"")!==(r==="_"?"":r))return false;
+    if(q&&!norm(it.nombre).includes(q)&&!norm(it.n).includes(q)&&!norm(it.cod).includes(q))return false;
+    if(f==="sindet")return it.dep==="P"&&!it.ven;
+    if(f==="condet")return !!it.ven;
+    if(f==="pend")return it.est==="pend";
+    if(f==="ret")return it.est==="ret";
+    if(f==="ok")return it.est==="ok";
     return true;
-  }).sort((a,b)=>(a.ruta||"").localeCompare(b.ruta||"")||a.recibido-b.recibido);
+  }).sort((a,b)=>(a.f+a.h).localeCompare(b.f+b.h)||a.n.localeCompare(b.n,"es",{numeric:true}));
 }
 function renderAprobar(){
-  const f=apFiltro||(sesion&&sesion.rol==="ventas"?"ventas":sesion&&sesion.rol==="contabilidad"?"conta":"mio");
-  document.querySelectorAll("#ap-filtros [data-af]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.af===f)));
+  const box=$("#ap-list");if(!box)return;
+  const ae=document.activeElement;if(ae&&box.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
+  const vc=verConta(),vs=esVentasSolo();
+  $("#ap-vista").hidden=!vc;
+  document.querySelectorAll("#ap-vista [data-av]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.av===apVista)));
+  $("#ap-prof").hidden=vc&&apVista==="conta";
+  const cs=$('section[data-view="contab"]');if(cs)cs.hidden=!(vc&&apVista==="conta"&&tab==="aprobar");
+  $("#ap-nota").innerHTML=vs?"Proformas de Perfumería que van llegando de Interakzion. Escriba el detalle para despacho, por ejemplo «Sale el miércoles 25.11.26»."
+    :"Las proformas llegan solas de Interakzion apenas se crean. Ventas pone el detalle (solo Perfumería) y Contabilidad autoriza o retiene el despacho de cada una. Si se factura en Interakzion, queda autorizada y sale de aquí sola.";
+  if(vc&&apVista==="conta")return;
+  const f=apFiltro||apFiltroDef();
+  const chips=vs?[["sindet","Sin detalle"],["condet","Con detalle"],["todos","Todas"]]:[["pend","Por autorizar"],["ret","Retenidas"],["ok","Autorizadas"],["sindet","Perfumería sin detalle"],["todos","Todas"]];
+  $("#ap-filtros").innerHTML=chips.map(([v,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-af="${v}" aria-pressed="${f===v}">${t}</button>`).join("");
+  $("#ap-dep").hidden=vs;
   const sel=$("#ap-ruta"),pv=sel.value;
   sel.innerHTML=`<option value="">Todas las rutas</option>`+S.rutas.map(r=>`<option value="${r.id}">${esc(r.nombre)}</option>`).join("")+`<option value="_">Sin ruta</option>`;sel.value=pv;
-  const rets=Object.values(S.clientes).filter(c=>c.retenido);
-  $("#ap-ret").innerHTML=rets.length?`<div class="eyebrow" style="margin-bottom:6px;color:var(--bad)">Clientes retenidos por Contabilidad</div>`+rets.map(c=>`<div class="li" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><span class="apb ret">✕</span><div class="ell" style="flex:1"><b>${esc(c.nombre)}</b> · ${esc(c.retenido.motivo||"")} <span class="note">· ${esc(c.retenido.por||"")} ${c.retenido.ts?fmtFecha(c.retenido.ts):""}</span></div>${canC()?`<button class="btn small" data-libcli="${esc(c.id)}">Liberar cliente</button>`:""}</div>`).join(""):"";
-  const vis=apVisibles();
-  const tot=enBodega();
-  $("#ap-sum").innerHTML=`${vis.length} mostrados · en bodega: ${tot.length} · <b style="color:var(--ok)">${tot.filter(listo).length} listos</b> · ${tot.filter(o=>estV(o)==="pend").length} falta Ventas · ${tot.filter(o=>estC(o)==="pend").length} falta Contabilidad · ${tot.filter(o=>estC(o)==="ret").length} retenidos`;
-  const pv2=vis.filter(o=>estV(o)==="pend"),pc=vis.filter(o=>estC(o)==="pend");
-  $("#ap-bulk").innerHTML=(canV()&&reqV()&&pv2.length?`<button class="btn small" data-bulk="v">Aprobar Ventas a los ${pv2.length} mostrados</button>`:"")+(canC()&&reqC()&&pc.length?`<button class="btn small" data-bulk="c">Aprobar Contabilidad a los ${pc.length} mostrados</button>`:"");
-  $("#ap-list").innerHTML=vis.length?vis.map(apRow).join(""):`<div class="empty" style="padding:24px">${f==="mio"?"No tiene pedidos pendientes de aprobar.":"Ningún pedido coincide con este filtro."}</div>`;
+  const rets=vc?Object.values(S.clientes).filter(c=>c.retenido):[];
+  $("#ap-ret").innerHTML=rets.length?`<div class="eyebrow" style="margin-bottom:6px;color:var(--bad)">Clientes retenidos por Contabilidad</div>`+rets.map(c=>`<div class="li" style="display:flex;gap:10px;align-items:center"><b>${esc(c.nombre)}</b><span class="note">${esc(c.retenido.motivo||"")} · ${esc(c.retenido.por||"")}</span>${puedeAutorizar()?`<button class="btn small" data-libcli="${esc(c.id)}">Liberar</button>`:""}</div>`).join(""):"";
+  const vis=apVisibles(),todos=[...apCache.values()].filter(it=>!vs||it.dep==="P");
+  const iaTxt=!gas?"":IA.ts?` · Interakzion revisado ${fmtHora(IA.ts)}`:" · esperando la lista de Interakzion…";
+  $("#ap-sum").innerHTML=vs?`${vis.length} mostradas · ${todos.filter(it=>!it.ven).length} sin detalle${iaTxt}`
+    :`${vis.length} mostradas · <b>${todos.filter(it=>it.est==="pend").length} por autorizar</b> · ${todos.filter(it=>it.est==="ret").length} retenidas · <span style="color:var(--ok)">${todos.filter(it=>it.est==="ok").length} autorizadas</span>${iaTxt}`;
+  const pend=vis.filter(it=>it.est==="pend");
+  $("#ap-bulk").innerHTML=puedeAutorizar()&&pend.length>1?`<button class="btn small" data-apbulk>✓ Autorizar las ${pend.length} mostradas</button>`:"";
+  box.innerHTML=vis.length?vis.map(apRow).join(""):`<div class="empty" style="padding:24px">${f==="pend"?"No hay proformas por autorizar.":f==="sindet"?"Todas las proformas de Perfumería tienen detalle.":"Ninguna proforma coincide con este filtro."}</div>`;
 }
-function apRow(o){
-  const r=rutaById(o.ruta),v=estV(o),c=estC(o),cr=cliRet(o);
-  const vc=v==="ret"?`<div><b style="color:var(--bad)">✕ Envío detenido</b></div><div class="note">${esc(o.ventas.motivo||"")} · ${esc(o.ventas.por||"")} ${o.ventas.ts?fmtFecha(o.ventas.ts):""}</div>${canV()?`<div><button class="btn small" data-vundo="${esc(o.id)}">Liberar</button></div>`:""}`
-    :!reqV()?`<div class="note">No se exige aprobación de Ventas.</div>`:v==="ok"?`<div><b style="color:var(--ok)">✓ Aprobado</b> <span class="note">· ${esc(o.ventas.por||"")} ${o.ventas.ts?fmtFecha(o.ventas.ts):""}</span></div>
-      ${o.ventas.fecha?`<div class="note">${fechaOk(o)?"Entregar desde":"Cliente pidió entrega el"} <b>${esc(fmtDia(o.ventas.fecha+"T12:00:00"))}</b>${fechaOk(o)?"":" · no sale antes"}</div>`:""}
-      ${o.ventas.nota?`<div class="note">${esc(o.ventas.nota)}</div>`:""}
-      ${canV()?`<div><button class="btn small" data-vundo="${esc(o.id)}">Quitar aprobación</button></div>`:""}`
-    :canV()?`<label class="note">Fecha de entrega pedida por el cliente (opcional)<br><input type="date" id="vf-${esc(o.id)}"></label>
-      <input id="vn-${esc(o.id)}" placeholder="Nota para despacho (opcional)" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)">
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-vok="${esc(o.id)}">Aprobar envío</button><button class="btn small danger" data-vblk="${esc(o.id)}">Detener envío</button></div>`:`<div class="note">Pendiente de Ventas</div>`;
-  const cc=cr?`<div><b style="color:var(--bad)">✕ Cliente retenido</b></div><div class="note">${esc(cr.motivo||"")} · ${esc(cr.por||"")}</div>${canC()?`<div><button class="btn small" data-libcli="${esc(o.clienteId)}">Liberar cliente</button></div>`:""}`
-    :c==="ret"?`<div><b style="color:var(--bad)">✕ Retenido</b></div><div class="note">${esc(o.conta.motivo||"")} · ${esc(o.conta.por||"")} ${o.conta.ts?fmtFecha(o.conta.ts):""}</div>${canC()?`<div><button class="btn small" data-cundo="${esc(o.id)}">Liberar</button></div>`:""}`
-    :!reqC()?`<div class="note">No se exige aprobación de Contabilidad.</div>`
-    :c==="ok"?`<div><b style="color:var(--ok)">✓ Aprobado</b> <span class="note">· ${esc(o.conta.por||"")} ${o.conta.ts?fmtFecha(o.conta.ts):""}</span></div>${canC()?`<div><button class="btn small" data-cundo="${esc(o.id)}">Quitar aprobación</button></div>`:""}`
-    :canC()?`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-cok="${esc(o.id)}">Puede despacharse</button><button class="btn small danger" data-cret="${esc(o.id)}">Retener</button></div>`:`<div class="note">Pendiente de Contabilidad</div>`;
-  return `<div class="aprow">
-    <div style="min-width:0;display:grid;gap:4px"><div><b>${esc(o.cliente)}</b>${o.clienteCodigo?` <span class="note mono">N.º ${esc(o.clienteCodigo)}</span>`:""}</div>
-      <div class="note"><span class="tag">${esc(o.ubic)}</span> · <span class="mono">${esc(o.proforma)}</span> · ${cj(o.bultos)} · <span class="dot" style="--c:${rutaColor(o.ruta)};display:inline-block;vertical-align:middle"></span> ${esc(r?r.nombre:"Sin ruta")}</div>
-      <div class="note">Recibido ${fmtFecha(o.recibido)}${o.devuelto?' · <span style="color:var(--r6)">Devuelto</span>':""}</div>
-      ${listo(o)?`<div class="listo">✓ Listo para despacho</div>`:""}</div>
-    <div class="apcell ${v==="ok"&&reqV()?"ok":v==="ret"?"ret":""}"><div class="aph">Ventas</div>${vc}</div>
-    <div class="apcell ${c==="ok"&&reqC()?"ok":c==="ret"?"ret":""}"><div class="aph">Contabilidad</div>${cc}</div></div>`;
+function apRow(it){
+  const vs=esVentasSolo(),vc=verConta(),pa=puedeAutorizar(),vm=vs||vc||verMontosUI();
+  const r=rutaById(it.ruta),v=it.ven,c=it.con;
+  const estIA=it.o?`En bodega <span class="tag">${esc(it.o.ubic||"")}</span>`:(it.e?`Interakzion: ${esc(it.e)}`:"");
+  const fh=it.f?`${it.f.slice(6,8)}/${it.f.slice(4,6)}${it.h?" "+esc(it.h.slice(0,5)):""}`:"";
+  const ven=it.dep!=="P"?`<div class="note">Bodega: no lleva detalle de Ventas.</div>`
+    :(yo("aprobarV")||yo("ajustes"))?`<input class="ap-vnota" data-k="${esc(it.k)}" value="${esc(v&&v.nota||"")}" placeholder="Ej.: Sale el miércoles 25.11.26" maxlength="200" aria-label="Detalle de Ventas para la proforma ${esc(it.n)}">
+      <label class="note" style="display:flex;gap:6px;align-items:center">Sale desde <input type="date" class="ap-vfecha" data-k="${esc(it.k)}" value="${esc(v&&v.fecha||"")}"></label>
+      ${v&&v.por?`<div class="note">${esc(v.por)} · ${v.ts?fmtFecha(v.ts):""}</div>`:""}`
+    :v?`<div><b>${esc(v.nota||"")}</b>${v.fecha?` <span class="kc pend">Sale desde ${esc(v.fecha.split("-").reverse().join("/"))}</span>`:""}</div><div class="note">${esc(v.por||"")}${v.ts?" · "+fmtFecha(v.ts):""}</div>`
+    :`<div class="note">Ventas no ha puesto detalle.</div>`;
+  let con="";
+  if(vc){
+    const cl=it.cli,cond=cl?(cl.condicion||"contado"):"",g=cl&&puedeCxc()?saldoDe(cl):null;
+    const credito=cl?`<div class="note">Cliente <b>${cond==="credito"?"de crédito"+(Number(cl.plazo)>0?" · "+Number(cl.plazo)+" días":""):"de contado"}</b>${g&&g.saldo>0?` · saldo ${colon(g.saldo)}${g.vencido>0?` · <span style="color:var(--bad)">vencido ${colon(g.vencido)}</span>`:""}`:""}</div>`:`<div class="note">Cliente nuevo o sin ficha (${esc(it.cod||"sin código")}).</div>`;
+    const estado=it.cliRet?`<div><b style="color:var(--bad)">✕ Cliente retenido</b></div><div class="note">${esc(it.cliRet.motivo||"")} · ${esc(it.cliRet.por||"")}</div>`
+      :it.est==="ret"?`<div><b style="color:var(--bad)">✕ Retenido</b></div><div class="note">${esc(c.motivo||"")} · ${esc(c.por||"")}${c.ts?" "+fmtFecha(c.ts):""}</div>${pa?`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-apc="ok|${esc(it.k)}">✓ Autorizar</button><button class="btn small" data-apc="pend|${esc(it.k)}">Quitar retención</button></div>`:""}`
+      :it.est==="ok"?`<div><b style="color:var(--ok)">✓ Autorizado</b> <span class="note">· ${esc(c.por||"")}${c.ts?" "+fmtFecha(c.ts):""}</span></div>${pa&&!c.auto?`<div><button class="linkbtn note" data-apc="pend|${esc(it.k)}">quitar autorización</button></div>`:""}`
+      :pa?`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-apc="ok|${esc(it.k)}">✓ Autorizar despacho</button><button class="btn small danger" data-apret="${esc(it.k)}">Retener</button></div>`
+      :`<div class="note">Pendiente de Contabilidad</div>`;
+    con=`<div class="apcell ${it.est==="ok"?"ok":it.est==="ret"?"ret":""}"><div class="aph">Contabilidad</div>${credito}${estado}</div>`;
+  }
+  return `<div class="aprow ap2" style="${vc?"":"grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)"}">
+    <div style="min-width:0;display:grid;gap:4px">
+      <div><b>${esc(it.nombre||"")}</b> ${it.cod?`<span class="note mono">N.º ${esc(it.cod)}</span>`:""} <span class="kc ${it.dep==="P"?"pend":"mut"}">${DEP_TXT[it.dep]||""}</span></div>
+      <div class="note"><span class="mono">Proforma ${esc(it.n)}</span>${fh?" · "+fh:""} · ${estIA}${it.cj?" · "+cj(it.cj):""}</div>
+      <div class="note"><span class="dot" style="--c:${r?rutaColor(r.id):"var(--muted)"};display:inline-block;margin-right:4px"></span>${r?esc(r.nombre):"Sin ruta"}${vm&&it.mo?` · <b>${colon(it.mo)}</b>`:""}</div>
+    </div>
+    <div class="apcell ${v?"ok":""}"><div class="aph">Detalle de Ventas</div>${ven}</div>
+    ${con}</div>`;
 }
+async function apGuardar(k,campo,val){
+  const it=apCache.get(k);if(!it)return;
+  const ex=(S.aprob||{})[k];
+  if(ex)await patch("aprob",k,{[campo]:val});
+  else await put("aprob",k,{dep:it.dep,proforma:it.n,codigo:it.cod||"",cliente:it.nombre||it.nm||"",[campo]:val});
+  if(it.o){
+    if(campo==="ventas")await patch("ordenes",it.o.id,{ventas:{estado:"ok",nota:val.nota||"",fecha:val.fecha||"",por:val.por,porId:val.porId,ts:val.ts}});
+    else await patch("ordenes",it.o.id,{conta:val});
+  }
+}
+const apFirma=()=>({por:sesion?sesion.nombre:"",porId:sesion?sesion.id:"",ts:Date.now()});
+async function apGuardarVentas(k){
+  const n=$(`.ap-vnota[data-k="${CSS.escape(k)}"]`),f=$(`.ap-vfecha[data-k="${CSS.escape(k)}"]`);if(!n)return;
+  const nota=n.value.trim(),fecha=f?f.value:"";
+  const it=apCache.get(k),prev=it&&it.ven;
+  if(prev&&(prev.nota||"")===nota&&(prev.fecha||"")===fecha)return;
+  if(!prev&&!nota&&!fecha)return;
+  try{await apGuardar(k,"ventas",{nota,fecha,...apFirma()});toast(nota||fecha?"Detalle guardado":"Detalle quitado")}catch(x){fail(x)}
+}
+function apRetener(k){
+  const it=apCache.get(k);if(!it)return;const sh=$("#sheet");
+  sh.innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-label="Retener proforma" style="border-top:8px solid var(--bad)">
+    <div><div class="eyebrow">Contabilidad</div><h3 style="font-size:26px">Retener · ${esc(it.nombre||"")}</h3><div class="note">Proforma <span class="mono">${esc(it.n)}</span> · ${DEP_TXT[it.dep]||""}${it.ven&&it.ven.nota?` · Ventas: ${esc(it.ven.nota)}`:""}</div></div>
+    <div class="field"><label for="rt-mot">Motivo</label><div class="chips">${MOT_RET.map(m=>`<button type="button" class="chip" style="--c:var(--bad)" data-rm="${esc(m)}">${esc(m)}</button>`).join("")}</div>
+      <input id="rt-mot" placeholder="Escriba o escoja el motivo" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)"></div>
+    ${it.cli?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rt-cli" style="width:20px;height:20px"> Retener <b>todos los pedidos de este cliente</b> hasta liberarlo</label>`:""}
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-rtok>Retener</button></div></div>`;
+  sh.hidden=false;
+  sh.onclick=async e=>{
+    if(e.target===sh||e.target.closest("[data-x]")){sh.hidden=true;return}
+    const m=e.target.closest("[data-rm]");if(m){$("#rt-mot").value=m.dataset.rm;sh.querySelectorAll("[data-rm]").forEach(x=>x.setAttribute("aria-pressed",String(x===m)));return}
+    if(!e.target.closest("[data-rtok]"))return;
+    const motivo=$("#rt-mot").value.trim();if(!motivo){toast("Escriba o escoja el motivo");return}
+    const todoCli=!!($("#rt-cli")&&$("#rt-cli").checked);
+    try{
+      if(todoCli)await patch("clientes",it.cli.id,{retenido:{motivo,...apFirma()}});
+      else await apGuardar(k,"conta",{estado:"retenido",motivo,...apFirma()});
+      sh.hidden=true;toast(todoCli?`${it.nombre} retenido: ningún pedido suyo sale hasta liberarlo`:"Proforma retenida");
+    }catch(x){fail(x)}
+  };
+}
+{const sec=$('section[data-view="aprobar"]');
+  sec.addEventListener("change",e=>{const i=e.target.closest(".ap-vnota,.ap-vfecha");if(i)apGuardarVentas(i.dataset.k)});
+  sec.addEventListener("keydown",e=>{const i=e.target.closest(".ap-vnota");if(i&&e.key==="Enter"){e.preventDefault();i.blur()}});
+  sec.addEventListener("click",async e=>{
+    const t=e.target;let b;
+    if((b=t.closest("[data-av]"))){apVista=b.dataset.av;if(apVista!=="conta"&&liqT&&liqCid)liqGuardar(liqCid);renderAprobar();if(apVista==="conta"){kaRepintar()}return}
+    if((b=t.closest("[data-apret]"))){apRetener(b.dataset.apret);return}
+    try{
+      if((b=t.closest("[data-apc]"))){const [est,k]=b.dataset.apc.split("|");b.disabled=true;
+        await apGuardar(k,"conta",{estado:est,motivo:"",...apFirma()});toast(est==="ok"?"Autorizado para despacho":"Queda pendiente de Contabilidad");return}
+      if((b=t.closest("[data-apbulk]"))){const list=apVisibles().filter(it=>it.est==="pend");
+        if(!list.length||!confirm(`¿Autorizar el despacho de ${list.length} proforma${list.length==1?"":"s"}?`))return;
+        b.disabled=true;for(const it of list)await apGuardar(it.k,"conta",{estado:"ok",motivo:"",...apFirma()});toast(`${list.length} autorizadas`);return}
+    }catch(x){fail(x)}
+  });
+  $("#ap-dep").addEventListener("change",()=>renderAprobar());
+}
+function apPendientesN(){
+  if(!sesion)return 0;const its=apItems();
+  if(esVentasSolo())return its.filter(it=>it.dep==="P"&&!it.ven).length;
+  if(puedeAutorizar())return its.filter(it=>it.est==="pend").length;
+  return 0;
+}
+
 const MOT_VEN=["Cliente pidió no enviar","Pedido incompleto","Precio por confirmar","Cambio de dirección","Otro"];
 function abrirRetencion(id,depto){
   depto=depto||"conta";const esV=depto==="ventas";
@@ -7741,7 +7877,7 @@ async function refrescar0(){
     if(!j.igual){
       rev=j.rev;
       const wrap=o=>{const m={};for(const k in (o||{}))m[k]={id:k,...o[k]};return m};
-      S.clientes=wrap(j.clientes);S.ordenes=wrap(j.ordenes);S.cierres=wrap(j.cierres);S.alistadores=wrap(j.alistadores);S.usuarios=wrap(j.usuarios);S.etiquetas=wrap(j.etiquetas);S.cxc=wrap(j.cxc);S.tareas=wrap(j.tareas);S.talonarios=wrap(j.talonarios);S.devgar=wrap(j.devgar);
+      S.aprob=wrap(j.aprob);S.clientes=wrap(j.clientes);S.ordenes=wrap(j.ordenes);S.cierres=wrap(j.cierres);S.alistadores=wrap(j.alistadores);S.usuarios=wrap(j.usuarios);S.etiquetas=wrap(j.etiquetas);S.cxc=wrap(j.cxc);S.tareas=wrap(j.tareas);S.talonarios=wrap(j.talonarios);S.devgar=wrap(j.devgar);
       const cr=j.config&&j.config.rutas;if(cr&&Array.isArray(cr.rutas)&&cr.rutas.length)S.rutas=conBodega(cr.rutas);
       rutasRevisado=!!(cr&&cr.revisado);opcionesGuardadas=!!(j.config&&j.config.opciones);
       S.opciones={etiquetaModo:"orden",...((j.config&&j.config.opciones)||{})};
