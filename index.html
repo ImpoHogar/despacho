@@ -198,6 +198,23 @@ section[data-view]{display:grid;gap:20px}
 .chip.hab{border-style:dashed}
 .note{font-size:14px;color:var(--muted)}
 .ap2 .ap-vnota{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);font-size:15px}
+.rt-row.ret{background:color-mix(in srgb,#eab308 10%,transparent)}
+.rt-row{padding-left:10px;border-left:4px solid transparent}.rt-row.ret{border-left-color:var(--bad)}.rt-row.ok{border-left-color:var(--ok)}.rt-row.pend{border-left-color:var(--line)}
+.rt-est{font-weight:700}.rt-est.ok{color:var(--ok)}.rt-est.ret{color:var(--bad)}.rt-est.pend{color:var(--muted)}
+.rt-acc{display:flex;gap:6px;flex-wrap:wrap}
+.rt-det{font-size:16px;font-weight:600}
+.rt-pf{display:flex;gap:6px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.rt-pf.sale{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.rt-pf input,.rt-pfl input{width:20px;height:20px;flex:none}
+.rt-fija{display:flex;gap:8px;align-items:center;border-left:6px solid var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:8px;padding:6px 8px}
+.rt-fija .rt-ftxt{flex:1;min-width:0;border:0;background:transparent;font-weight:700;font-size:15px;color:inherit;padding:4px}
+.rt-fija select{padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)}
+.rt-sugb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;color:inherit;font:inherit}
+.rt-sugb:hover,.rt-sugb:focus{border-color:var(--ink)}
+.rt-selbox{display:grid;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
+.rt-pfs{display:grid;gap:6px}.rt-pfl{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.rt-cmonto{width:150px}.rt-cnota{flex:1;min-width:160px}
+.rt-cmonto,.rt-cnota{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
 .ap2 .ap-vfecha{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)}
 .ia-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:99px;border:1.5px solid var(--ok);color:var(--ok);vertical-align:1px}
 .ia-val{font-weight:600}.ia-aviso{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.ia-aviso.warn{border-color:var(--warn);color:var(--ink)}
@@ -844,8 +861,32 @@ html:has(.kliq),.kliq{overflow-anchor:none}
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
       <div><h2 style="font-size:30px">Aprobación de Ventas y Contabilidad</h2><div class="note" id="ap-nota"></div></div>
       <div class="chips" id="ap-vista" hidden>
+        <button type="button" class="chip" style="--c:var(--ink)" data-av="ruta">Ruta</button>
         <button type="button" class="chip" style="--c:var(--ink)" data-av="prof">Proformas por autorizar</button>
         <button type="button" class="chip" style="--c:var(--ink)" data-av="conta">Rutas, choferes y cobros</button>
+      </div>
+    </div>
+    <div id="ap-rutav" style="display:grid;gap:16px">
+      <div class="panel" id="rt-fijas-box" style="display:grid;gap:8px">
+        <div class="eyebrow">Notas fijas · siempre a la vista</div>
+        <div id="rt-fijas" style="display:grid;gap:6px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="rt-fnew" maxlength="200" placeholder="Nueva nota fija (ej.: Cobro donde Elicer todos los días)" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)">
+          <select id="rt-fnewc" aria-label="Color" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)"><option value="naranja">Naranja</option><option value="rojo">Rojo</option><option value="amarillo">Amarillo</option><option value="verde">Verde</option><option value="azul">Azul</option><option value="gris">Gris</option></select>
+          <button type="button" class="btn small" data-fadd>Agregar nota</button></div>
+      </div>
+      <div class="panel" id="rt-nuevo" style="display:grid;gap:10px">
+        <div class="field"><label for="rt-cq">Buscar cliente para agregar a Ruta</label><input id="rt-cq" type="search" autocomplete="off" placeholder="Nombre, número de cliente o número de proforma" style="font-size:17px;padding:11px 12px"></div>
+        <div id="rt-sug" style="display:grid;gap:6px"></div>
+        <div id="rt-sel" class="rt-selbox" hidden></div>
+      </div>
+      <div class="panel" style="display:grid;gap:8px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <div class="chips" id="rt-filtros"></div>
+          <select id="rt-dep" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)" aria-label="Departamento"><option value="">Perfumería y Bodega</option><option value="P">Perfumería</option><option value="B">Bodega</option></select>
+          <input id="rt-q" type="search" placeholder="Buscar en Ruta" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center"><div class="note" id="rt-sum"></div><div id="rt-bulk" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+        <div id="rt-list"></div>
       </div>
     </div>
     <div id="ap-prof" style="display:grid;gap:16px">
@@ -1013,7 +1054,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
         <div class="field" style="flex:1;min-width:180px"><label for="np-name">Nombre</label><input id="np-name" placeholder="Nombre de la persona" style="font-size:16px;padding:10px"></div>
         <div class="field" style="width:120px"><label for="np-pin">Clave</label><input id="np-pin" inputmode="numeric" maxlength="6" class="mono" placeholder="4 a 6" style="font-size:16px;padding:10px"></div>
         <div class="field" style="min-width:210px"><label for="np-tpl">Empezar con permisos de</label><select id="np-tpl" style="font-size:16px;padding:10px">
-          <option value="alistador">Alistador</option><option value="ventas">Ventas</option><option value="contabilidad">Contabilidad</option><option value="facturacion">Facturación</option><option value="rutero">Rutero (contar carga)</option><option value="rutas">Encargado de rutas</option><option value="admin">Administrador (todo)</option><option value="ninguno">Ninguno (los marco yo)</option></select></div>
+          <option value="alistador">Alistador</option><option value="ventas">Ventas Perfumería</option><option value="ventasBodega">Ventas Bodega</option><option value="contabilidad">Contabilidad</option><option value="facturacion">Facturación</option><option value="rutero">Rutero (contar carga)</option><option value="rutas">Encargado de rutas</option><option value="admin">Administrador (todo)</option><option value="ninguno">Ninguno (los marco yo)</option></select></div>
         <button class="btn dark" id="np-add">Agregar persona</button>
       </div>
       <details><summary style="cursor:pointer;font-weight:600">Pegar lista de personas</summary>
@@ -1132,7 +1173,7 @@ const esBodega=id=>{const r=S.rutas.find(x=>x.id===id);return !!(r&&r.tipo==="bo
 const esCobroB=c=>!!c&&c.tipo==="cobrobodega";
 const DEFAULT_RUTAS=conBodega([1,2,3,4,5].map(i=>({id:"R"+i,nombre:"Ruta "+i,estante:"ABCDE"[i-1],capacidad:100,posiciones:30})));
 let rutasRevisado=false, opcionesGuardadas=false;
-const S={rutas:DEFAULT_RUTAS,clientes:{},ordenes:{},cierres:{},alistadores:{},usuarios:{},etiquetas:{},cxc:{},tareas:{},talonarios:{},devgar:{},aprob:{},opciones:{etiquetaModo:"orden"}};
+const S={rutas:DEFAULT_RUTAS,clientes:{},ordenes:{},cierres:{},alistadores:{},usuarios:{},etiquetas:{},cxc:{},tareas:{},talonarios:{},devgar:{},aprob:{},panel:{},opciones:{etiquetaModo:"orden"}};
 let rev=null, modoEstacion=false, estacionHace=null, standalone=location.protocol==="file:";
  
 const gas=!!(window.google&&google.script&&google.script.run);
@@ -1162,7 +1203,7 @@ function cargarLocal(){try{const d=JSON.parse(localStorage.getItem(LS_KEY)||"nul
   rutasRevisado=!!d.rutasRevisado;opcionesGuardadas=!!d.opcionesGuardadas}catch(e){}}
 
  
-const MAP={clientes:"clientes",ordenes:"ordenes",cierres:"cierres",alistadores:"alistadores",usuarios:"usuarios",etiquetas:"etiquetas",cxc:"cxc",tareas:"tareas",talonarios:"talonarios",devgar:"devgar",aprob:"aprob"};
+const MAP={clientes:"clientes",ordenes:"ordenes",cierres:"cierres",alistadores:"alistadores",usuarios:"usuarios",etiquetas:"etiquetas",cxc:"cxc",tareas:"tareas",talonarios:"talonarios",devgar:"devgar",aprob:"aprob",panel:"panel"};
 async function api(ops){
   if(gas){
     if(ops.some(o=>o.col==="usuarios"||o.col==="alistadores"||o.col==="config")){
@@ -1247,10 +1288,10 @@ let sesion=null, ultimaAct=Date.now();
 const PERMISOS=[
   {g:"Recibir",k:"registrar",t:"Registrar órdenes"},{g:"Recibir",k:"devoluciones",t:"Devoluciones"},{g:"Alisto",k:"alisto",t:"Ver prioridades de Alisto"},{g:"Inventario",k:"inventario",t:"Relleno de racks de Bodega"},
   {g:"Rutas",k:"rutas",t:"Ver tablero"},{g:"Rutas",k:"mover",t:"Mover pedidos"},{g:"Rutas",k:"cerrar",t:"Cerrar rutas"},{g:"Rutas",k:"entregar",t:"Entrega en bodega"},{g:"Rutas",k:"cargar",t:"Contar carga (rutero)"},
-  {g:"Aprobaciones",k:"aprobarV",t:"Autorizar Ventas (V)"},{g:"Aprobaciones",k:"aprobarC",t:"Autorizar Contab. (C)"},
+  {g:"Aprobaciones",k:"aprobarV",t:"Ventas Perfumería (detalle)"},{g:"Aprobaciones",k:"ventasB",t:"Ventas Bodega (detalle)"},{g:"Aprobaciones",k:"aprobarC",t:"Autorizar Contab. (C)"},
   {g:"Facturación",k:"facturar",t:"Facturar y salida"},{g:"Contabilidad",k:"liquidar",t:"Cerrar rutas con chofer"},
   {g:"Otros",k:"reportes",t:"Reportes"},{g:"Otros",k:"montos",t:"Ver montos y cobros"},{g:"Otros",k:"ajustes",t:"Ajustes y claves"}];
-const PLANTILLAS={alistador:["registrar","devoluciones"],jefealisto:["alisto"],bodega:["inventario"],ventas:["aprobarV"],contabilidad:["rutas","aprobarC","liquidar","montos","reportes"],facturacion:["facturar"],rutero:["cargar"],rutas:["registrar","devoluciones","rutas","mover","cerrar","entregar","reportes"],admin:PERMISOS.map(x=>x.k),ninguno:[]};
+const PLANTILLAS={alistador:["registrar","devoluciones"],jefealisto:["alisto"],bodega:["inventario"],ventas:["aprobarV"],ventasBodega:["ventasB"],contabilidad:["rutas","aprobarC","liquidar","montos","reportes"],facturacion:["facturar"],rutero:["cargar"],rutas:["registrar","devoluciones","rutas","mover","cerrar","entregar","reportes"],admin:PERMISOS.map(x=>x.k),ninguno:[]};
 const ROL_A_PERM={jefe:PLANTILLAS.admin,facturacion:["registrar","devoluciones","facturar"],ventas:["rutas","aprobarV"],contabilidad:["rutas","aprobarC","liquidar"]};
 const permDeLista=l=>Object.fromEntries(PERMISOS.map(x=>[x.k,l.includes(x.k)]));
 function permisosDe(p){if(!p)return {};if(p.permisos)return p.permisos;return permDeLista(p._src==="alistadores"?PLANTILLAS.alistador:(ROL_A_PERM[p.rol]||[]))}
@@ -1259,14 +1300,14 @@ const personaPorClave=k=>{k=String(k||"").trim();return k&&!gas?personas().find(
 const tiene=(x,perm)=>!!(x&&permisosDe(x)[perm]);
 const yo=perm=>!!(sesion&&sesion.permisos&&sesion.permisos[perm]);
 const usPorClave=k=>personaPorClave(k);
-const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV","aprobarC","liquidar"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"]};
+const TAB_PERM={alisto:["alisto"],inventario:["inventario"],gps:["reportes","rutas","mover","cerrar","liquidar","ajustes"],hoy:["reportes"],aprobar:["aprobarV","ventasB","aprobarC","liquidar","mover","cerrar"],rutas:["rutas","mover","cerrar","entregar"],facturar:["facturar"],contab:["aprobarC","liquidar","ajustes"],carga:["cargar","ajustes"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"]};
 const permitido=t=>gas?gasPermitido(t):localPermitido(t);
 const GAS_TAB={recibir:["registrar","devoluciones"],carga:["cargar","cerrar"],estacion:["registrar"]};
 function gasPermitido(t){if(!sesion)return false;if(yo("ajustes"))return true;return ((GAS_TAB[t]||TAB_PERM[t])||[]).some(yo)}
 const TAB_ORDEN=["hoy","recibir","alisto","inventario","aprobar","rutas","carga","facturar","gps","reportes","bitacora","ajustes"];
 const primeraTab=()=>TAB_ORDEN.find(permitido)||"recibir";
-const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","aprobarC","liquidar","entregar","devoluciones"].some(yo);
-const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":yo("inventario")?"Bodega":"Usuario";
+const soloChofer=()=>!!sesion&&(yo("cargar")||yo("chofer"))&&!["registrar","rutas","mover","cerrar","facturar","ajustes","reportes","aprobarV","ventasB","aprobarC","liquidar","entregar","devoluciones"].some(yo);
+const etiquetaSesion=()=>yo("ajustes")?"Admin":yo("cerrar")||yo("mover")?"Rutas":yo("aprobarC")&&yo("aprobarV")?"Ventas y Contab.":yo("aprobarC")||yo("liquidar")?"Contabilidad":yo("aprobarV")?"Ventas":yo("ventasB")?"Ventas Bodega":yo("facturar")?"Facturación":yo("reportes")?"Reportes":yo("cargar")?"Rutero":yo("inventario")?"Bodega":"Usuario";
 function renderSesion(){
   const el=$("#sess");if(!el)return;
   if(gas){
@@ -3442,7 +3483,7 @@ function abrirCondClientes(){
 }
 
  
-const PUESTOS=[["alistador","Alistador"],["jefealisto","Jefe de Alisto"],["bodega","Bodega (receptor de mercadería)"],["rutero","Chofer o rutero"],["ventas","Ventas"],["contabilidad","Contabilidad"],["facturacion","Facturación"],["rutas","Encargado de rutas"],["admin","Administrador"]];
+const PUESTOS=[["alistador","Alistador"],["jefealisto","Jefe de Alisto"],["bodega","Bodega (receptor de mercadería)"],["rutero","Chofer o rutero"],["ventas","Ventas Perfumería"],["ventasBodega","Ventas Bodega"],["contabilidad","Contabilidad"],["facturacion","Facturación"],["rutas","Encargado de rutas"],["admin","Administrador"]];
 const PUESTO_N=Object.fromEntries(PUESTOS);
 function puestoDeTexto(v){const t=norm(v);if(!t)return "";
   if(/alist/.test(t)&&/jefe|encarg|supervis|lider|prioridad/.test(t))return "jefealisto";
@@ -3599,7 +3640,7 @@ async function descargarFormato(){
 document.addEventListener("click",e=>{if(e.target.closest("[data-formato]")){e.preventDefault();descargarFormato()}});
 
  
-const TAB_LOCAL={alisto:["alisto"],inventario:["inventario"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV","aprobarC","liquidar"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
+const TAB_LOCAL={alisto:["alisto"],inventario:["inventario"],hoy:["reportes"],recibir:["registrar","devoluciones"],aprobar:["aprobarV","ventasB","aprobarC","liquidar","mover","cerrar"],rutas:["rutas","mover","cerrar","entregar"],carga:["cargar","cerrar"],
   facturar:["facturar"],contab:["aprobarC","liquidar"],reportes:["reportes"],bitacora:["ajustes"],ajustes:["ajustes"],estacion:["registrar"]};
 function localPermitido(t){
   if(t==="estacion"&&!standalone&&!sesion)return true;   
@@ -7193,10 +7234,10 @@ const canC=()=>yo("aprobarC");
    Las proformas entran solas desde Interakzion (las que todavía no se facturan), aunque no se hayan
    registrado en Recibir. Ventas (solo Perfumería) pone el detalle; Contabilidad autoriza o retiene.
    Lo que se decide aquí queda en la ficha «aprob» de la proforma y pasa solo al pedido cuando se registra. */
-let apVista="prof",apCache=new Map();
+let apVista="ruta",apCache=new Map();
 const verConta=()=>yo("aprobarC")||yo("liquidar")||yo("ajustes");
 const puedeAutorizar=()=>yo("aprobarC")||yo("ajustes");
-const esVentasSolo=()=>yo("aprobarV")&&!verConta();
+const esVentasSolo=()=>(yo("aprobarV")||yo("ventasB"))&&!verConta()&&!yo("mover")&&!yo("cerrar");
 const IA_VIVOS=/^(Proformado|En Alisto|Chequeo|En Chequeo|Listo)/i;
 const depDe=o=>o.depto==="P"||o.depto==="B"?o.depto:(/^P\d/.test(String(o.clienteCodigo||""))?"P":(/^\d/.test(String(o.clienteCodigo||""))?"B":""));
 const apKeyOrden=o=>{const n=String(o.proforma||"").trim().replace(/^0+/,""),d=depDe(o);if(d)return d+"_"+n;const P=(S.aprob||{})["P_"+n],B=(S.aprob||{})["B_"+n];return P&&!B?"P_"+n:B&&!P?"B_"+n:""};
@@ -7236,12 +7277,13 @@ const cliPorCodigo=(m,cod)=>cod?m[String(cod)]||null:null;
 function apFiltroDef(){return esVentasSolo()?"sindet":"pend"}
 function apVisibles(){
   const f=apFiltro||apFiltroDef();
-  const q=norm($("#ap-q").value),r=$("#ap-ruta").value,dp=esVentasSolo()?"P":$("#ap-dep").value;
+  const q=norm($("#ap-q").value),r=$("#ap-ruta").value,dp=esVentasSolo()?"":$("#ap-dep").value,deps=misDeps();
   return apItems().filter(it=>{
+    if(!deps.includes(it.dep))return false;
     if(dp&&it.dep!==dp)return false;
     if(r&&(it.ruta||"")!==(r==="_"?"":r))return false;
     if(q&&!norm(it.nombre).includes(q)&&!norm(it.n).includes(q)&&!norm(it.cod).includes(q))return false;
-    if(f==="sindet")return it.dep==="P"&&!it.ven;
+    if(f==="sindet")return !it.ven;
     if(f==="condet")return !!it.ven;
     if(f==="pend")return it.est==="pend";
     if(f==="ret")return it.est==="ret";
@@ -7253,36 +7295,44 @@ function renderAprobar(){
   const box=$("#ap-list");if(!box)return;
   const ae=document.activeElement;if(ae&&box.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
   const vc=verConta(),vs=esVentasSolo();
-  $("#ap-vista").hidden=!vc;
-  document.querySelectorAll("#ap-vista [data-av]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.av===apVista)));
-  $("#ap-prof").hidden=vc&&apVista==="conta";
+  const vistas={ruta:true,prof:vc||yo("aprobarV"),conta:vc};
+  if(!vistas[apVista])apVista="ruta";
+  $("#ap-vista").hidden=Object.values(vistas).filter(Boolean).length<2;
+  document.querySelectorAll("#ap-vista [data-av]").forEach(b=>{b.hidden=!vistas[b.dataset.av];b.setAttribute("aria-pressed",String(b.dataset.av===apVista))});
+  $("#ap-prof").hidden=apVista!=="prof";
+  $("#ap-rutav").hidden=apVista!=="ruta";
   const cs=$('section[data-view="contab"]');if(cs)cs.hidden=!(vc&&apVista==="conta"&&tab==="aprobar");
-  $("#ap-nota").innerHTML=vs?"Proformas de Perfumería que van llegando de Interakzion. Escriba el detalle para despacho, por ejemplo «Sale el miércoles 25.11.26»."
+  if(apVista==="ruta"){
+    $("#ap-nota").innerHTML=vs?"Busque el cliente, marque sus proformas y escriba el detalle para despacho. Contabilidad lo revisa y Logística lo despacha."
+      :esLogR()&&!vc?"Clientes que Ventas mandó a Ruta. Marque las proformas autorizadas que salen hoy, una por una o todas."
+      :"El panel de despacho por cliente: Ventas pone el detalle, Contabilidad aprueba o retiene e indica el cobro, y Logística marca lo que sale hoy.";
+    renderRuta();return;
+  }
+  $("#ap-nota").innerHTML=vs?"Proformas que van llegando de Interakzion. Escriba el detalle para despacho, por ejemplo «Sale el miércoles 25.11.26»."
     :"Las proformas llegan solas de Interakzion apenas se crean. Ventas pone el detalle (solo Perfumería) y Contabilidad autoriza o retiene el despacho de cada una. Si se factura en Interakzion, queda autorizada y sale de aquí sola.";
   if(vc&&apVista==="conta")return;
   const f=apFiltro||apFiltroDef();
-  const chips=vs?[["sindet","Sin detalle"],["condet","Con detalle"],["todos","Todas"]]:[["pend","Por autorizar"],["ret","Retenidas"],["ok","Autorizadas"],["sindet","Perfumería sin detalle"],["todos","Todas"]];
+  const chips=vs?[["sindet","Sin detalle"],["condet","Con detalle"],["todos","Todas"]]:[["pend","Por autorizar"],["ret","Retenidas"],["ok","Autorizadas"],["sindet","Sin detalle"],["todos","Todas"]];
   $("#ap-filtros").innerHTML=chips.map(([v,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-af="${v}" aria-pressed="${f===v}">${t}</button>`).join("");
   $("#ap-dep").hidden=vs;
   const sel=$("#ap-ruta"),pv=sel.value;
   sel.innerHTML=`<option value="">Todas las rutas</option>`+S.rutas.map(r=>`<option value="${r.id}">${esc(r.nombre)}</option>`).join("")+`<option value="_">Sin ruta</option>`;sel.value=pv;
   const rets=vc?Object.values(S.clientes).filter(c=>c.retenido):[];
   $("#ap-ret").innerHTML=rets.length?`<div class="eyebrow" style="margin-bottom:6px;color:var(--bad)">Clientes retenidos por Contabilidad</div>`+rets.map(c=>`<div class="li" style="display:flex;gap:10px;align-items:center"><b>${esc(c.nombre)}</b><span class="note">${esc(c.retenido.motivo||"")} · ${esc(c.retenido.por||"")}</span>${puedeAutorizar()?`<button class="btn small" data-libcli="${esc(c.id)}">Liberar</button>`:""}</div>`).join(""):"";
-  const vis=apVisibles(),todos=[...apCache.values()].filter(it=>!vs||it.dep==="P");
+  const vis=apVisibles(),todos=[...apCache.values()].filter(it=>misDeps().includes(it.dep));
   const iaTxt=!gas?"":IA.ts?` · Interakzion revisado ${fmtHora(IA.ts)}`:" · esperando la lista de Interakzion…";
   $("#ap-sum").innerHTML=vs?`${vis.length} mostradas · ${todos.filter(it=>!it.ven).length} sin detalle${iaTxt}`
     :`${vis.length} mostradas · <b>${todos.filter(it=>it.est==="pend").length} por autorizar</b> · ${todos.filter(it=>it.est==="ret").length} retenidas · <span style="color:var(--ok)">${todos.filter(it=>it.est==="ok").length} autorizadas</span>${iaTxt}`;
   const pend=vis.filter(it=>it.est==="pend");
   $("#ap-bulk").innerHTML=puedeAutorizar()&&pend.length>1?`<button class="btn small" data-apbulk>✓ Autorizar las ${pend.length} mostradas</button>`:"";
-  box.innerHTML=vis.length?vis.map(apRow).join(""):`<div class="empty" style="padding:24px">${f==="pend"?"No hay proformas por autorizar.":f==="sindet"?"Todas las proformas de Perfumería tienen detalle.":"Ninguna proforma coincide con este filtro."}</div>`;
+  box.innerHTML=vis.length?vis.map(apRow).join(""):`<div class="empty" style="padding:24px">${f==="pend"?"No hay proformas por autorizar.":f==="sindet"?"Todas las proformas tienen detalle.":"Ninguna proforma coincide con este filtro."}</div>`;
 }
 function apRow(it){
   const vs=esVentasSolo(),vc=verConta(),pa=puedeAutorizar(),vm=vs||vc||verMontosUI();
   const r=rutaById(it.ruta),v=it.ven,c=it.con;
   const estIA=it.o?`En bodega <span class="tag">${esc(it.o.ubic||"")}</span>`:(it.e?`Interakzion: ${esc(it.e)}`:"");
   const fh=it.f?`${it.f.slice(6,8)}/${it.f.slice(4,6)}${it.h?" "+esc(it.h.slice(0,5)):""}`:"";
-  const ven=it.dep!=="P"?`<div class="note">Bodega: no lleva detalle de Ventas.</div>`
-    :(yo("aprobarV")||yo("ajustes"))?`<input class="ap-vnota" data-k="${esc(it.k)}" value="${esc(v&&v.nota||"")}" placeholder="Ej.: Sale el miércoles 25.11.26" maxlength="200" aria-label="Detalle de Ventas para la proforma ${esc(it.n)}">
+  const ven=puedeDet(it.dep)?`<input class="ap-vnota" data-k="${esc(it.k)}" value="${esc(v&&v.nota||"")}" placeholder="Ej.: Sale el miércoles 25.11.26" maxlength="200" aria-label="Detalle de Ventas para la proforma ${esc(it.n)}">
       <label class="note" style="display:flex;gap:6px;align-items:center">Sale desde <input type="date" class="ap-vfecha" data-k="${esc(it.k)}" value="${esc(v&&v.fecha||"")}"></label>
       ${v&&v.por?`<div class="note">${esc(v.por)} · ${v.ts?fmtFecha(v.ts):""}</div>`:""}`
     :v?`<div><b>${esc(v.nota||"")}</b>${v.fecha?` <span class="kc pend">Sale desde ${esc(v.fecha.split("-").reverse().join("/"))}</span>`:""}</div><div class="note">${esc(v.por||"")}${v.ts?" · "+fmtFecha(v.ts):""}</div>`
@@ -7313,8 +7363,8 @@ async function apGuardar(k,campo,val){
   if(ex)await patch("aprob",k,{[campo]:val});
   else await put("aprob",k,{dep:it.dep,proforma:it.n,codigo:it.cod||"",cliente:it.nombre||it.nm||"",[campo]:val});
   if(it.o){
-    if(campo==="ventas")await patch("ordenes",it.o.id,{ventas:{estado:"ok",nota:val.nota||"",fecha:val.fecha||"",por:val.por,porId:val.porId,ts:val.ts}});
-    else await patch("ordenes",it.o.id,{conta:val});
+    if(campo==="ventas"&&yo("aprobarV"))await patch("ordenes",it.o.id,{ventas:{estado:"ok",nota:val.nota||"",fecha:val.fecha||"",por:val.por,porId:val.porId,ts:val.ts}});
+    else if(campo==="conta")await patch("ordenes",it.o.id,{conta:val});
   }
 }
 const apFirma=()=>({por:sesion?sesion.nombre:"",porId:sesion?sesion.id:"",ts:Date.now()});
@@ -7367,9 +7417,274 @@ function apRetener(k){
 }
 function apPendientesN(){
   if(!sesion)return 0;const its=apItems();
-  if(esVentasSolo())return its.filter(it=>it.dep==="P"&&!it.ven).length;
+  if(esVentasSolo())return 0;
+  if(esLogR()&&!verConta()){const hoy=hoyYmd();return rtEntradas().reduce((s,e)=>s+e.live.filter(it=>it.est==="ok"&&!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy)).length,0)}
   if(puedeAutorizar())return its.filter(it=>it.est==="pend").length;
   return 0;
+}
+
+/* ── Ruta: el panel de despacho por cliente (antes la hoja de Google) ──
+   Ventas (Perfumería o Bodega, cada quien lo suyo) busca el cliente, escoge sus proformas y pone el detalle.
+   Contabilidad aprueba o retiene y deja las indicaciones de cobro. Logística (Carlos) marca lo que sale hoy.
+   Fichas en la colección «panel»: C_<dep>_<código>_<n> (cliente) y F_... (notas fijas). */
+const esLogR=()=>yo("mover")||yo("cerrar");
+const esVend=()=>(yo("aprobarV")||yo("ventasB"))&&!verConta();
+const misDeps=()=>verConta()||esLogR()||yo("ajustes")?["P","B"]:[yo("aprobarV")&&"P",yo("ventasB")&&"B"].filter(Boolean);
+const puedeDet=dep=>yo("ajustes")||(dep==="P"&&yo("aprobarV"))||(dep==="B"&&yo("ventasB"));
+const soloRuta=()=>!verConta()&&!yo("aprobarV");
+const puedeMarcar=()=>esLogR()||yo("ajustes");
+const puedeFijas=()=>verConta()||esLogR();
+const verCobro=()=>verConta()||esLogR();
+const rtMontos=()=>verConta()||yo("aprobarV")||yo("ventasB")||verMontosUI();
+const hoyYmd=()=>ymd(Date.now());
+const RT_COLORES={rojo:["Rojo","var(--bad)"],naranja:["Naranja","#f97316"],amarillo:["Amarillo","#eab308"],verde:["Verde","var(--ok)"],azul:["Azul","#3b82f6"],gris:["Gris","var(--muted)"]};
+const COBROS=[["efectivo","Efectivo"],["datafono","Llevar datáfono"],["sinpe","SINPE"],["transferencia","Transferencia"]];
+let rtFiltro=null,rtSel=null,rtSugQ="";
+const rtDepCli=cod=>/^P\d/.test(String(cod||""))?"P":"B";
+const fechaCorta=f=>f?f.split("-").reverse().join("/"):"";
+function rtEntradas(){
+  apItems();
+  const deps=misDeps(),hoy=hoyYmd(),out=[];
+  for(const [id,x] of Object.entries(S.panel||{})){
+    if(x.tipo!=="cli"||!deps.includes(x.dep))continue;
+    const live=(x.pf||[]).map(k=>apCache.get(k)).filter(Boolean);
+    if(!live.length)continue;
+    const enPf=new Set(x.pf||[]);
+    const extra=[...apCache.values()].filter(it=>it.dep===x.dep&&String(it.cod)===String(x.codigo)&&!enPf.has(it.k));
+    const cli=live[0].cli||(x.clienteId?S.clientes[x.clienteId]:null)||null;
+    const cr=cli&&cli.retenido;
+    const est=cr||live.some(it=>it.est==="ret")?"ret":live.every(it=>it.est==="ok")?"ok":"pend";
+    const salen=live.filter(it=>it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy);
+    out.push({id,x,live,extra,cli,cr,est,salen,nombre:cli?cli.nombre:(x.cliente||live[0].nombre||"")});
+  }
+  return out;
+}
+const rtActiva=(dep,cod)=>rtEntradas().find(e=>e.x.dep===dep&&String(e.x.codigo)===String(cod))||null;
+function rtFiltroDef(){return esLogR()&&!verConta()?"ok":"todos"}
+function rtVisibles(){
+  const f=rtFiltro||rtFiltroDef(),q=norm(($("#rt-q")||{}).value||""),dp=($("#rt-dep")||{}).value||"";
+  return rtEntradas().filter(e=>{
+    if(dp&&e.x.dep!==dp)return false;
+    if(q&&!norm(e.nombre).includes(q)&&!norm(e.x.codigo).includes(q)&&!e.live.some(it=>norm(it.n).includes(q))&&!norm((e.x.ventas||{}).nota).includes(q))return false;
+    if(f==="pend")return e.est==="pend";
+    if(f==="ret")return e.est==="ret";
+    if(f==="ok")return e.live.some(it=>it.est==="ok");
+    if(f==="hoy")return e.salen.length>0;
+    return true;
+  }).sort((a,b)=>((a.x.ventas||{}).fecha||"9").localeCompare((b.x.ventas||{}).fecha||"9")||((a.x.ventas||{}).ts||0)-((b.x.ventas||{}).ts||0));
+}
+function rtCandidatos(q){
+  apItems();q=norm(q);if(!q)return [];
+  const deps=misDeps().filter(puedeDet),g=new Map();
+  for(const it of apCache.values()){
+    if(!deps.includes(it.dep))continue;
+    const k=it.dep+"|"+it.cod;
+    if(!g.has(k))g.set(k,{dep:it.dep,cod:it.cod,nombre:it.nombre||it.nm||"",items:[],cli:it.cli});
+    g.get(k).items.push(it);
+  }
+  const out=[...g.values()].filter(c=>norm(c.nombre).includes(q)||norm(c.cod)===q||norm(c.cod).includes(q)||c.items.some(it=>String(it.n)===q));
+  const sinPf=Object.values(S.clientes).filter(c=>c.codigo&&deps.includes(rtDepCli(c.codigo))&&!g.has(rtDepCli(c.codigo)+"|"+c.codigo)&&(norm(c.nombre).includes(q)||norm(c.codigo)===q)).slice(0,5)
+    .map(c=>({dep:rtDepCli(c.codigo),cod:String(c.codigo),nombre:c.nombre,items:[],cli:c}));
+  return out.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,12).concat(sinPf);
+}
+function rtPintarSug(){
+  const box=$("#rt-sug");if(!box)return;
+  const q=($("#rt-cq")||{}).value||"";
+  if(!q.trim()){box.innerHTML="";return}
+  const c=rtCandidatos(q);
+  box.innerHTML=c.length?c.map(x=>`<button type="button" class="rt-sugb" data-rtc="${esc(x.dep)}|${esc(x.cod)}"><b>${esc(x.nombre)}</b> <span class="note mono">N.º ${esc(x.cod)}</span> <span class="kc ${x.dep==="P"?"pend":"mut"}">${DEP_TXT[x.dep]}</span>
+    <span class="note">${x.items.length?`${x.items.length} proforma${x.items.length==1?"":"s"} sin facturar`:"sin proformas pendientes"}</span>${rtActiva(x.dep,x.cod)?` <span class="kc ok">ya está en Ruta</span>`:""}</button>`).join("")
+    :`<div class="note" style="padding:8px">No encuentro ese cliente${misDeps().length===1?" en "+DEP_TXT[misDeps()[0]]:""}.</div>`;
+}
+function rtPintarSel(){
+  const box=$("#rt-sel");if(!box)return;
+  if(!rtSel){box.innerHTML="";box.hidden=true;return}
+  apItems();
+  const {dep,cod}=rtSel,act=rtActiva(dep,cod);
+  const its=[...apCache.values()].filter(it=>it.dep===dep&&String(it.cod)===String(cod)).sort((a,b)=>(a.f+a.h).localeCompare(b.f+b.h));
+  const cli=(its[0]&&its[0].cli)||Object.values(S.clientes).find(c=>String(c.codigo)===String(cod))||null;
+  const nombre=cli?cli.nombre:(its[0]?its[0].nombre:rtSel.nombre||"");
+  const v=act?act.x.ventas||{}:{},enPf=act?new Set(act.x.pf||[]):null,vm=rtMontos();
+  const r=rutaById(cli&&cli.ruta);
+  box.hidden=false;
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+      <div><div class="eyebrow">${act?"Editar en Ruta":"Agregar a Ruta"}</div><div style="font-size:20px"><b>${esc(nombre)}</b> <span class="note mono">N.º ${esc(cod)}</span> <span class="kc ${dep==="P"?"pend":"mut"}">${DEP_TXT[dep]}</span></div>
+      <div class="note"><span class="dot" style="--c:${r?rutaColor(r.id):"var(--muted)"};display:inline-block;margin-right:4px"></span>${r?esc(r.nombre):"Sin ruta"}</div></div>
+      <button type="button" class="btn small" data-rtx>Cerrar</button></div>
+    ${its.length?`<div class="eyebrow" style="margin-top:4px">Proformas sin facturar en Interakzion · marque las que van</div>
+    <div class="rt-pfs">${its.map(it=>`<label class="rt-pfl"><input type="checkbox" class="rt-pfc" value="${esc(it.k)}" ${enPf?(enPf.has(it.k)?"checked":""):"checked"}>
+      <span><b class="mono">Proforma ${esc(it.n)}</b> · ${it.f?it.f.slice(6,8)+"/"+it.f.slice(4,6):""} · ${it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?` · <b>${colon(it.mo)}</b>`:""}${enPf&&!enPf.has(it.k)?` <span class="kc pend">nueva</span>`:""}</span></label>`).join("")}</div>`
+    :`<div class="note" style="color:var(--bad)">Este cliente no tiene proformas sin facturar en Interakzion. Cuando haga la proforma, aparece aquí sola.</div>`}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+      <div class="field" style="flex:1;min-width:220px"><label for="rt-nota">Detalle para despacho</label><input id="rt-nota" maxlength="200" value="${esc(v.nota||"")}" placeholder="Ej.: Martes ruta Cartago · Encomienda · Entregar en la casa de ella"></div>
+      <div class="field"><label for="rt-fecha">Sale desde (opcional)</label><input id="rt-fecha" type="date" value="${esc(v.fecha||"")}"></div>
+      <button type="button" class="btn primary" data-rtsave ${its.length?"":"disabled"}>${act?"Guardar cambios":"Agregar a Ruta"}</button>
+    </div>`;
+}
+function renderRuta(){
+  const list=$("#rt-list");if(!list)return;
+  const ae=document.activeElement,raiz=$("#ap-rutav");
+  if(ae&&raiz&&raiz.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)&&ae.id!=="rt-q"&&ae.id!=="rt-cq")return;
+  const vc=verConta(),lg=esLogR()&&!vc,vend=misDeps().some(puedeDet);
+  // Notas fijas
+  const fb=$("#rt-fijas-box");fb.hidden=!puedeFijas();
+  if(puedeFijas()){
+    const fj=Object.entries(S.panel||{}).filter(([,x])=>x.tipo==="fija").sort((a,b)=>(a[1].orden||0)-(b[1].orden||0)||(a[1].ts||0)-(b[1].ts||0));
+    $("#rt-fijas").innerHTML=fj.length?fj.map(([id,x])=>{const c=(RT_COLORES[x.color]||RT_COLORES.gris)[1];
+      return `<div class="rt-fija" style="--c:${c}"><input class="rt-ftxt" data-fid="${esc(id)}" value="${esc(x.texto||"")}" maxlength="200" aria-label="Nota fija">
+        <select class="rt-fcol" data-fid="${esc(id)}" aria-label="Color">${Object.entries(RT_COLORES).map(([k,[t]])=>`<option value="${k}" ${x.color===k?"selected":""}>${t}</option>`).join("")}</select>
+        <button type="button" class="linkbtn" data-fdel="${esc(id)}" aria-label="Quitar nota">✕</button></div>`}).join("")
+      :`<div class="note">No hay notas fijas. Aquí van los cobros y tareas que se repiten (por ejemplo «Cobro al Rahi todos los viernes»).</div>`;
+  }
+  // Agregar cliente (solo Ventas)
+  $("#rt-nuevo").hidden=!vend;
+  if(vend){rtPintarSug();rtPintarSel()}
+  // Filtros
+  const f=rtFiltro||rtFiltroDef();
+  const chips=vc?[["todos","Todos"],["pend","Por aprobar"],["ret","Retenidos"],["ok","Aprobados"],["hoy","Salen hoy"]]
+    :lg?[["ok","Autorizados"],["hoy","Salen hoy"],["todos","Todos"]]:[];
+  $("#rt-filtros").innerHTML=chips.map(([v,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-rtf="${v}" aria-pressed="${f===v}">${t}</button>`).join("");
+  $("#rt-dep").hidden=misDeps().length<2;
+  const vis=rtVisibles(),todas=rtEntradas(),hoy=hoyYmd();
+  const nAut=vis.reduce((s,e)=>s+e.live.filter(it=>it.est==="ok").length,0),nHoy=todas.reduce((s,e)=>s+e.salen.length,0);
+  $("#rt-sum").innerHTML=`${vis.length} cliente${vis.length==1?"":"s"} en Ruta`+(vc||lg?` · ${todas.filter(e=>e.est==="pend").length} por aprobar · <span style="color:var(--ok)">${nHoy} proforma${nHoy==1?"":"s"} salen hoy</span>`:"");
+  const marcables=vis.flatMap(e=>e.live.filter(it=>it.est==="ok"&&!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy)));
+  const marcadas=vis.flatMap(e=>e.salen);
+  $("#rt-bulk").innerHTML=puedeMarcar()?`${marcables.length?`<button class="btn small primary" data-rtall>✓ Seleccionar todo (${marcables.length} autorizada${marcables.length==1?"":"s"})</button>`:""}${marcadas.length?`<button class="btn small" data-rtnone>Quitar las ${marcadas.length} de hoy</button>`:""}`:"";
+  list.innerHTML=vis.length?vis.map(rtFila).join(""):`<div class="empty" style="padding:24px">${vend&&!todas.length?"Todavía no hay clientes en Ruta. Búsquelo arriba, escoja sus proformas y escriba el detalle.":"Ningún cliente coincide con este filtro."}</div>`;
+}
+function rtFila(e){
+  const x=e.x,v=x.ventas||{},vc=verConta(),pa=puedeAutorizar(),pm=puedeMarcar(),vm=rtMontos(),hoy=hoyYmd();
+  const r=rutaById(e.cli&&e.cli.ruta);
+  const cob=x.cobro||{},cobTxt=COBROS.filter(([k])=>cob[k]).map(([,t])=>t);
+  let colA="";
+  if(verCobro()){
+    const estado=e.cr?`<div class="rt-est ret">✕ Cliente retenido</div>${vc?`<div class="note">${esc(e.cr.motivo||"")}</div>`:""}${pa?`<button class="btn small" data-libcli="${esc(e.cli.id)}">Liberar cliente</button>`:""}`
+      :e.est==="ret"?`<div class="rt-est ret">✕ ${vc?esc((e.live.find(it=>it.est==="ret").con||{}).motivo||"Retenido"):"Retenido por Contabilidad"}</div>${pa?`<div class="rt-acc"><button class="btn small primary" data-rta="ok|${esc(e.id)}">✓ Aprobar</button></div>`:""}`
+      :e.est==="ok"?`<div class="rt-est ok">✓ Aprobado</div>${pa?`<button class="linkbtn note" data-rta="pend|${esc(e.id)}">quitar aprobación</button>`:""}`
+      :`<div class="rt-est pend">Por aprobar</div>${pa?`<div class="rt-acc"><button class="btn small primary" data-rta="ok|${esc(e.id)}">✓ Aprobar</button><button class="btn small danger" data-rtr="${esc(e.id)}">Retener</button></div>`:""}`;
+    const cobro=pa?`<div class="aph" style="margin-top:6px">Cobro</div><div class="chips">${COBROS.map(([k,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-rtcob="${k}|${esc(e.id)}" aria-pressed="${!!cob[k]}">${t}</button>`).join("")}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><input class="rt-cmonto" data-eid="${esc(e.id)}" inputmode="numeric" placeholder="Monto a cobrar ₡" value="${cob.monto?esc(cob.monto):""}">
+        <input class="rt-cnota" data-eid="${esc(e.id)}" maxlength="160" placeholder="Indicación (ej.: pagan en efectivo)" value="${esc(cob.nota||"")}"></div>`
+      :(cobTxt.length||cob.monto||cob.nota)?`<div class="aph" style="margin-top:6px">Cobro</div><div><b>${esc(cobTxt.join(" · "))}</b>${cob.monto?` · cobrar <b>${colon(cob.monto)}</b>`:""}</div>${cob.nota?`<div>${esc(cob.nota)}</div>`:""}`:"";
+    colA=`<div class="apcell ${e.est==="ok"?"ok":e.est==="ret"?"ret":""}"><div class="aph">Contabilidad</div>${estado}${cobro}</div>`;
+  }
+  const det=v.nota||v.fecha?`<div class="rt-det">${esc(v.nota||"")}${v.fecha?` <span class="kc pend">Sale desde ${esc(fechaCorta(v.fecha))}</span>`:""}</div><div class="note">${esc(v.por||"")}${v.ts?" · "+fmtFecha(v.ts):""}</div>`:`<div class="note">Sin detalle.</div>`;
+  const pfs=e.live.map(it=>{
+    const sale=it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy;
+    const ic=verCobro()?(it.est==="ok"?`<span style="color:var(--ok)" title="Autorizada">✓</span>`:it.est==="ret"?`<span style="color:var(--bad)" title="Retenida">✕</span>`:`<span class="note" title="Por aprobar">…</span>`):"";
+    const chk=pm?`<input type="checkbox" class="rt-hoy" data-k="${esc(it.k)}" ${sale?"checked":""} ${it.est==="ok"?"":"disabled"} aria-label="Sale hoy la proforma ${esc(it.n)}">`:"";
+    return `<label class="rt-pf ${sale?"sale":""}">${chk}${ic} <b class="mono">${esc(it.n)}</b> <span class="note">${it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?" · "+colon(it.mo):""}${sale?` · <b style="color:var(--ok)">sale hoy</b>`:""}</span></label>`;
+  }).join("");
+  const nOk=e.live.filter(it=>it.est==="ok").length;
+  const todasHoy=pm&&nOk>0?`<label class="rt-pf" style="border-style:dashed"><input type="checkbox" class="rt-hoyall" data-eid="${esc(e.id)}" ${e.salen.length===nOk?"checked":""}> <b>Todas salen hoy</b></label>`:"";
+  const extra=e.extra.length&&puedeDet(x.dep)?`<div class="note">+ ${e.extra.length} proforma${e.extra.length==1?"":"s"} nueva${e.extra.length==1?"":"s"} sin incluir (${e.extra.map(it=>esc(it.n)).join(", ")}) · <button class="linkbtn" data-rtc="${esc(x.dep)}|${esc(x.codigo)}">agregar</button></div>`:"";
+  return `<div class="aprow rt-row ${e.est}" style="${verCobro()?"":"grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)"}">
+    <div style="min-width:0;display:grid;gap:4px">
+      <div><b style="font-size:17px">${esc(e.nombre)}</b> <span class="note mono">N.º ${esc(x.codigo||"")}</span> <span class="kc ${x.dep==="P"?"pend":"mut"}">${DEP_TXT[x.dep]||""}</span></div>
+      <div class="note"><span class="dot" style="--c:${r?rutaColor(r.id):"var(--muted)"};display:inline-block;margin-right:4px"></span>${r?esc(r.nombre):"Sin ruta"}</div>
+      ${det}
+      ${puedeDet(x.dep)?`<div><button class="linkbtn" data-rtc="${esc(x.dep)}|${esc(x.codigo)}">Editar detalle o proformas</button></div>`:""}
+    </div>
+    <div class="apcell"><div class="aph">Proformas${pm?" · marque las que salen hoy":""}</div>${todasHoy}${pfs}${extra}</div>
+    ${colA}</div>`;
+}
+async function rtGuardarSel(){
+  if(!rtSel)return;
+  const {dep,cod}=rtSel,act=rtActiva(dep,cod);
+  const pf=[...document.querySelectorAll("#rt-sel .rt-pfc:checked")].map(i=>i.value);
+  const nota=$("#rt-nota").value.trim(),fecha=$("#rt-fecha").value;
+  if(!pf.length){toast("Marque al menos una proforma");return}
+  if(!nota&&!fecha){toast("Escriba el detalle para despacho");$("#rt-nota").focus();return}
+  apItems();const it0=apCache.get(pf[0]);
+  const ven={nota,fecha,...apFirma()};
+  const id=act?act.id:`C_${dep}_${String(cod).replace(/[^\w-]/g,"")}_${Date.now().toString(36)}`;
+  const quitar=act?(act.x.pf||[]).filter(k=>!pf.includes(k)&&apCache.has(k)):[];
+  try{
+    const data={tipo:"cli",dep,codigo:String(cod),cliente:it0?(it0.nombre||it0.nm||""):"",clienteId:it0&&it0.cli?it0.cli.id:"",pf,ventas:ven,ts:Date.now()};
+    if(act)await patch("panel",id,data);else await put("panel",id,data);
+    for(const k of pf)await apGuardar(k,"ventas",ven);
+    for(const k of quitar)await apGuardar(k,"ventas",{nota:"",fecha:"",...apFirma()});
+    rtSel=null;$("#rt-cq").value="";toast(act?"Cambios guardados en Ruta":"Cliente agregado a Ruta");renderRuta();
+  }catch(x){fail(x)}
+}
+function rtRetener(eid){
+  const e=rtEntradas().find(z=>z.id===eid);if(!e)return;const sh=$("#sheet");
+  sh.innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-label="Retener" style="border-top:8px solid var(--bad)">
+    <div><div class="eyebrow">Contabilidad</div><h3 style="font-size:26px">Retener · ${esc(e.nombre)}</h3><div class="note">${e.live.length} proforma${e.live.length==1?"":"s"}: ${e.live.map(it=>esc(it.n)).join(", ")}${(e.x.ventas||{}).nota?` · Ventas: ${esc(e.x.ventas.nota)}`:""}</div></div>
+    <div class="field"><label for="rt-mot">Motivo</label><div class="chips">${MOT_RET.map(m=>`<button type="button" class="chip" style="--c:var(--bad)" data-rm="${esc(m)}">${esc(m)}</button>`).join("")}</div>
+      <input id="rt-mot" placeholder="Escriba o escoja el motivo" style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)"></div>
+    ${e.cli?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rt-cli" style="width:20px;height:20px"> Retener <b>todos los pedidos de este cliente</b> hasta liberarlo</label>`:""}
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-rtok>Retener</button></div></div>`;
+  sh.hidden=false;
+  sh.onclick=async ev=>{
+    if(ev.target===sh||ev.target.closest("[data-x]")){sh.hidden=true;return}
+    const m=ev.target.closest("[data-rm]");if(m){$("#rt-mot").value=m.dataset.rm;sh.querySelectorAll("[data-rm]").forEach(z=>z.setAttribute("aria-pressed",String(z===m)));return}
+    if(!ev.target.closest("[data-rtok]"))return;
+    const motivo=$("#rt-mot").value.trim();if(!motivo){toast("Escriba o escoja el motivo");return}
+    const todoCli=!!($("#rt-cli")&&$("#rt-cli").checked);
+    try{
+      if(todoCli)await patch("clientes",e.cli.id,{retenido:{motivo,...apFirma()}});
+      else for(const it of e.live)await apGuardar(it.k,"conta",{estado:"retenido",motivo,...apFirma()});
+      sh.hidden=true;toast(todoCli?`${e.nombre} retenido: ningún pedido suyo sale hasta liberarlo`:"Retenido");
+    }catch(x){fail(x)}
+  };
+}
+async function rtCobro(eid,cambio){
+  const x=(S.panel||{})[eid];if(!x)return;
+  const c={...(x.cobro||{}),...cambio,...apFirma()};
+  try{await patch("panel",eid,{cobro:c})}catch(e){fail(e)}
+}
+async function rtMarcar(keys,sale){
+  const hoy=hoyYmd(),d=sale?{fecha:hoy,...apFirma()}:{fecha:"",...apFirma()};
+  for(const k of keys)await apGuardar(k,"despacho",d);
+}
+{const raiz=$("#ap-rutav");
+  raiz.addEventListener("input",e=>{if(e.target.id==="rt-cq"){rtPintarSug()}else if(e.target.id==="rt-q")renderRuta()});
+  raiz.addEventListener("keydown",e=>{
+    if(e.target.id==="rt-cq"&&e.key==="Enter"){e.preventDefault();const b=$("#rt-sug [data-rtc]");if(b)b.click()}
+    if(e.target.id==="rt-nota"&&e.key==="Enter"){e.preventDefault();rtGuardarSel()}
+    if(e.target.matches(".rt-ftxt,.rt-cnota,.rt-cmonto")&&e.key==="Enter"){e.preventDefault();e.target.blur()}
+  });
+  raiz.addEventListener("change",async e=>{
+    const t=e.target;
+    try{
+      if(t.id==="rt-dep"){renderRuta();return}
+      if(t.matches(".rt-hoy")){await rtMarcar([t.dataset.k],t.checked);toast(t.checked?"Marcada: sale hoy":"Quitada de hoy");return}
+      if(t.matches(".rt-hoyall")){const en=rtEntradas().find(z=>z.id===t.dataset.eid);if(!en)return;const hoy=hoyYmd();
+        const ks=en.live.filter(it=>it.est==="ok"&&(t.checked?!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy):(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy))).map(it=>it.k);
+        await rtMarcar(ks,t.checked);toast(t.checked?`${ks.length} marcada${ks.length==1?"":"s"}: salen hoy`:"Quitadas de hoy");return}
+      if(t.matches(".rt-ftxt")){const v=t.value.trim();if(v)await patch("panel",t.dataset.fid,{texto:v});return}
+      if(t.matches(".rt-fcol")){await patch("panel",t.dataset.fid,{color:t.value});return}
+      if(t.matches(".rt-cmonto")){await rtCobro(t.dataset.eid,{monto:Number(String(t.value).replace(/[^\d]/g,""))||0});return}
+      if(t.matches(".rt-cnota")){await rtCobro(t.dataset.eid,{nota:t.value.trim()});return}
+    }catch(x){fail(x)}
+  });
+  raiz.addEventListener("click",async e=>{
+    const t=e.target;let b;
+    if((b=t.closest("[data-rtc]"))){const [dep,cod]=b.dataset.rtc.split("|");rtSel={dep,cod};$("#rt-sug").innerHTML="";rtPintarSel();$("#rt-sel").scrollIntoView({block:"nearest",behavior:"smooth"});setTimeout(()=>{const n=$("#rt-nota");if(n)n.focus()},50);return}
+    if(t.closest("[data-rtx]")){rtSel=null;rtPintarSel();return}
+    if(t.closest("[data-rtsave]")){rtGuardarSel();return}
+    if((b=t.closest("[data-rtf]"))){rtFiltro=b.dataset.rtf;renderRuta();return}
+    if((b=t.closest("[data-rtr]"))){rtRetener(b.dataset.rtr);return}
+    try{
+      if((b=t.closest("[data-rta]"))){const [est,eid]=b.dataset.rta.split("|");const en=rtEntradas().find(z=>z.id===eid);if(!en)return;b.disabled=true;
+        const ks=en.live.filter(it=>est==="ok"?it.est!=="ok":it.est==="ok"&&!(it.con&&it.con.auto)).map(it=>it.k);
+        for(const k of ks)await apGuardar(k,"conta",{estado:est,motivo:"",...apFirma()});
+        toast(est==="ok"?"Aprobado para despacho":"Queda por aprobar");return}
+      if((b=t.closest("[data-rtcob]"))){const [k,eid]=b.dataset.rtcob.split("|");const x=(S.panel||{})[eid];await rtCobro(eid,{[k]:!(x&&x.cobro&&x.cobro[k])});return}
+      if((b=t.closest("[data-rtall]"))){const hoy=hoyYmd();const ks=rtVisibles().flatMap(en=>en.live.filter(it=>it.est==="ok"&&!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy))).map(it=>it.k);
+        if(!ks.length||!confirm(`¿Marcar que salen hoy las ${ks.length} proformas autorizadas que se ven en la lista?`))return;
+        b.disabled=true;await rtMarcar(ks,true);toast(`${ks.length} marcadas: salen hoy`);return}
+      if((b=t.closest("[data-rtnone]"))){const ks=rtVisibles().flatMap(en=>en.salen).map(it=>it.k);
+        if(!ks.length||!confirm(`¿Quitar las ${ks.length} proformas marcadas para hoy?`))return;
+        b.disabled=true;await rtMarcar(ks,false);toast("Quitadas de hoy");return}
+      if((b=t.closest("[data-fdel]"))){const x=(S.panel||{})[b.dataset.fdel];if(!confirm(`¿Quitar la nota fija «${x?x.texto:""}»?`))return;await del("panel",b.dataset.fdel);toast("Nota quitada");return}
+      if(t.closest("[data-fadd]")){const tx=$("#rt-fnew").value.trim();if(!tx){toast("Escriba la nota");return}
+        const n=Object.values(S.panel||{}).filter(x=>x.tipo==="fija").length;
+        await put("panel","F_"+Date.now().toString(36),{tipo:"fija",texto:tx,color:$("#rt-fnewc").value,orden:n+1,...apFirma()});$("#rt-fnew").value="";toast("Nota fija agregada");return}
+    }catch(x){fail(x)}
+  });
 }
 
 const MOT_VEN=["Cliente pidió no enviar","Pedido incompleto","Precio por confirmar","Cambio de dirección","Otro"];
@@ -7877,7 +8192,7 @@ async function refrescar0(){
     if(!j.igual){
       rev=j.rev;
       const wrap=o=>{const m={};for(const k in (o||{}))m[k]={id:k,...o[k]};return m};
-      S.aprob=wrap(j.aprob);S.clientes=wrap(j.clientes);S.ordenes=wrap(j.ordenes);S.cierres=wrap(j.cierres);S.alistadores=wrap(j.alistadores);S.usuarios=wrap(j.usuarios);S.etiquetas=wrap(j.etiquetas);S.cxc=wrap(j.cxc);S.tareas=wrap(j.tareas);S.talonarios=wrap(j.talonarios);S.devgar=wrap(j.devgar);
+      S.aprob=wrap(j.aprob);S.panel=wrap(j.panel);S.clientes=wrap(j.clientes);S.ordenes=wrap(j.ordenes);S.cierres=wrap(j.cierres);S.alistadores=wrap(j.alistadores);S.usuarios=wrap(j.usuarios);S.etiquetas=wrap(j.etiquetas);S.cxc=wrap(j.cxc);S.tareas=wrap(j.tareas);S.talonarios=wrap(j.talonarios);S.devgar=wrap(j.devgar);
       const cr=j.config&&j.config.rutas;if(cr&&Array.isArray(cr.rutas)&&cr.rutas.length)S.rutas=conBodega(cr.rutas);
       rutasRevisado=!!(cr&&cr.revisado);opcionesGuardadas=!!(j.config&&j.config.opciones);
       S.opciones={etiquetaModo:"orden",...((j.config&&j.config.opciones)||{})};
