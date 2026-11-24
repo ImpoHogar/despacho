@@ -7631,8 +7631,9 @@ function renderRuta(){
   $("#rt-bulk").innerHTML=puedeMarcar()?`${marcables.length?`<button class="btn small primary" data-rtall>✓ Seleccionar todo (${marcables.length} autorizada${marcables.length==1?"":"s"})</button>`:""}${marcadas.length?`<button class="btn small" data-rtnone>Quitar las ${marcadas.length} de hoy</button>`:""}`:"";
   list.innerHTML=vis.length?vis.map(rtFila).join(""):`<div class="empty" style="padding:24px">${vend&&!todas.length?"Todavía no hay clientes en Ruta. Búsquelo arriba, escoja sus proformas y escriba el detalle.":"Ningún cliente coincide con este filtro."}</div>`;
 }
+const rtDesde=e=>{const f=(e&&e.x&&e.x.ventas&&e.x.ventas.fecha)||"";return f>hoyYmd()?f:""};
 function rtFila(e){
-  const x=e.x,v=x.ventas||{},vc=verConta(),pa=puedeAutorizar(),pm=puedeMarcar(),vm=rtMontos(),hoy=hoyYmd();
+  const x=e.x,v=x.ventas||{},vc=verConta(),pa=puedeAutorizar(),pm=puedeMarcar(),vm=rtMontos(),hoy=hoyYmd(),esp=rtDesde(e);
   const r=rutaById(e.cli&&e.cli.ruta);
   const cob=x.cobro||{},cobTxt=COBROS.filter(([k])=>cob[k]).map(([,t])=>t);
   let colA="";
@@ -7651,11 +7652,12 @@ function rtFila(e){
   const pfs=e.live.map(it=>{
     const sale=it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy;
     const ic=verCobro()?(it.est==="ok"?`<span style="color:var(--ok)" title="Autorizada">✓</span>`:it.est==="ret"?`<span style="color:var(--bad)" title="Retenida">✕</span>`:`<span class="note" title="Por aprobar">…</span>`):"";
-    const chk=pm?`<input type="checkbox" class="rt-hoy" data-k="${esc(it.k)}" ${sale?"checked":""} ${it.est==="ok"?"":"disabled"} aria-label="Sale hoy la proforma ${esc(it.n)}">`:"";
+    const chk=pm?`<input type="checkbox" class="rt-hoy" data-k="${esc(it.k)}" ${sale?"checked":""} ${it.est==="ok"&&!(esp&&!sale)?"":"disabled"} aria-label="Sale hoy la proforma ${esc(it.n)}">`:"";
     return `<label class="rt-pf ${sale?"sale":""}">${chk}${ic} <b class="mono">${esc(it.n)}</b> <span class="note">${it.fact?esc(it.e):it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?" · "+colon(it.mo):""}${sale?` · <b style="color:var(--ok)">sale hoy</b>`:""}</span></label>`;
   }).join("");
   const nOk=e.live.filter(it=>it.est==="ok").length;
-  const todasHoy=pm&&nOk>0?`<label class="rt-pf" style="border-style:dashed"><input type="checkbox" class="rt-hoyall" data-eid="${esc(e.id)}" ${e.salen.length===nOk?"checked":""}> <b>Todas salen hoy</b></label>`:"";
+  const espAv=pm&&esp?`<div class="note" style="color:var(--bad);font-weight:600">🔒 Ventas dice: sale desde ${esc(fechaCorta(esp))}. No se puede marcar para hoy.</div>`:"";
+  const todasHoy=pm&&nOk>0&&!(esp&&!e.salen.length)?`<label class="rt-pf" style="border-style:dashed"><input type="checkbox" class="rt-hoyall" data-eid="${esc(e.id)}" ${e.salen.length===nOk?"checked":""}> <b>Todas salen hoy</b></label>`:"";
   const extra=e.extra.length&&puedeDet(x.dep)?`<div class="note">+ ${e.extra.length} proforma${e.extra.length==1?"":"s"} nueva${e.extra.length==1?"":"s"} sin incluir (${e.extra.map(it=>esc(it.n)).join(", ")}) · <button class="linkbtn" data-rtc="${esc(x.dep)}|${esc(x.codigo)}">agregar</button></div>`:"";
   return `<div class="aprow rt-row ${e.est}" style="${verCobro()?"":"grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)"}">
     <div style="min-width:0;display:grid;gap:4px">
@@ -7664,7 +7666,7 @@ function rtFila(e){
       ${det}
       ${puedeDet(x.dep)?`<div><button class="linkbtn" data-rtc="${esc(x.dep)}|${esc(x.codigo)}">Editar detalle o proformas</button></div>`:""}
     </div>
-    <div class="apcell"><div class="aph">Proformas${pm?" · marque las que salen hoy":""}</div>${todasHoy}${pfs}${extra}</div>
+    <div class="apcell"><div class="aph">Proformas${pm?" · marque las que salen hoy":""}</div>${espAv}${todasHoy}${pfs}${extra}</div>
     ${colA}</div>`;
 }
 async function rtGuardarSel(){
@@ -7730,6 +7732,7 @@ async function rtMarcar(keys,sale){
       if(t.id==="rt-dep"){renderRuta();return}
       if(t.matches(".rt-hoy")){await rtMarcar([t.dataset.k],t.checked);toast(t.checked?"Marcada: sale hoy":"Quitada de hoy");return}
       if(t.matches(".rt-hoyall")){const en=rtEntradas().find(z=>z.id===t.dataset.eid);if(!en)return;const hoy=hoyYmd();
+        if(t.checked&&rtDesde(en)){t.checked=false;toast(`Ventas dice que sale desde ${fechaCorta(rtDesde(en))}`);return}
         const ks=en.live.filter(it=>it.est==="ok"&&(t.checked?!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy):(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy))).map(it=>it.k);
         await rtMarcar(ks,t.checked);toast(t.checked?`${ks.length} marcada${ks.length==1?"":"s"}: salen hoy`:"Quitadas de hoy");return}
       if(t.matches(".rt-ftxt")){const v=t.value.trim();if(v)await patch("panel",t.dataset.fid,{texto:v});return}
@@ -7751,7 +7754,7 @@ async function rtMarcar(keys,sale){
         for(const k of ks)await apGuardar(k,"conta",{estado:est,motivo:"",...apFirma()});
         toast(est==="ok"?"Aprobado para despacho":"Queda por aprobar");return}
       if((b=t.closest("[data-rtcob]"))){const [k,eid]=b.dataset.rtcob.split("|");const x=(S.panel||{})[eid];await rtCobro(eid,{[k]:!(x&&x.cobro&&x.cobro[k])});return}
-      if((b=t.closest("[data-rtall]"))){const hoy=hoyYmd();const ks=rtVisibles().flatMap(en=>en.live.filter(it=>it.est==="ok"&&!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy))).map(it=>it.k);
+      if((b=t.closest("[data-rtall]"))){const hoy=hoyYmd();const ks=rtVisibles().filter(en=>!rtDesde(en)).flatMap(en=>en.live.filter(it=>it.est==="ok"&&!(it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy))).map(it=>it.k);
         if(!ks.length||!confirm(`¿Marcar que salen hoy las ${ks.length} proformas autorizadas que se ven en la lista?`))return;
         b.disabled=true;await rtMarcar(ks,true);toast(`${ks.length} marcadas: salen hoy`);return}
       if((b=t.closest("[data-rtnone]"))){const ks=rtVisibles().flatMap(en=>en.salen).map(it=>it.k);
@@ -8358,7 +8361,7 @@ const GUIAS={
   ["Cuando el chofer regresa, en <b>Rutas, choferes y cobros</b> toque <b>Cerrar con el chofer</b> y revise lo cobrado.",59.9]]},
  rutaLog:{titulo:"Ruta: lo que sale hoy",para:"Logística y Despacho",tab:"aprobar",video:V(5,"05-rutas"),desde:34.5,pasos:[
   ["Aquí ve solo lo que Contabilidad ya autorizó, con el cobro que indicó.",34.5],
-  ["Marque lo que sale hoy: una por una, o todo junto con <b>Seleccionar todo</b>.",34.5],
+  ["Marque lo que sale hoy: una por una, o todo junto con <b>Seleccionar todo</b>. Si Ventas puso «sale desde» otro día, la casilla queda bloqueada con candado.",34.5],
   ["Lea las <b>notas fijas</b> de arriba antes de armar las rutas."],
   ["Después vaya a la pestaña <b>Rutas</b> para cerrar cada ruta.",44.8]]},
  rutas:{titulo:"Tablero de Rutas",para:"Logística y Despacho",tab:"rutas",video:V(5,"05-rutas"),pasos:[
