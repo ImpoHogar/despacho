@@ -7358,7 +7358,7 @@ function apRow(it){
     ${con}</div>`;
 }
 async function apGuardar(k,campo,val){
-  const it=apCache.get(k);if(!it)return;
+  const it=apCache.get(k)||rtCache.get(k);if(!it)return;
   const ex=(S.aprob||{})[k];
   if(ex)await patch("aprob",k,{[campo]:val});
   else await put("aprob",k,{dep:it.dep,proforma:it.n,codigo:it.cod||"",cliente:it.nombre||it.nm||"",[campo]:val});
@@ -7441,13 +7441,39 @@ const RT_COLORES={rojo:["Rojo","var(--bad)"],naranja:["Naranja","#f97316"],amari
 const COBROS=[["efectivo","Efectivo"],["datafono","Llevar datáfono"],["sinpe","SINPE"],["transferencia","Transferencia"]];
 let rtFiltro=null,rtSel=null,rtSugQ="";
 const rtDepCli=cod=>/^P\d/.test(String(cod||""))?"P":"B";
+/* En la empresa se factura antes de despachar: una proforma facturada sigue en Ruta hasta que sale
+   (pedido despachado o marcada para salir un día que ya pasó). Facturada = autorizada, salvo que Contabilidad la retenga. */
+let rtCache=new Map();
+const ymdC=t=>ymd(t).replace(/-/g,"");
+function rtIndice(){
+  const ia=new Map(),ord=new Map();
+  for(const lst of Object.values(IA.p||{}))for(const x of lst)ia.set(x.d+"_"+x.n,x);
+  for(const o of Object.values(S.ordenes)){if(o.ejemplo||o.devuelto)continue;const k=apKeyOrden(o);if(k)ord.set(k,o)}
+  return {ia,ord,hoy:hoyYmd()};
+}
+function rtItem(k,ix,dias){
+  const a=apCache.get(k);if(a)return a;
+  const x=ix.ia.get(k);if(!x||!((x.fa&&x.fa!=="0")||/^factur/i.test(String(x.e||""))))return null;
+  const o=ix.ord.get(k)||null;if(o&&o.estado!=="bodega")return null;
+  const ap=(S.aprob||{})[k]||null;
+  if(ap&&ap.despacho&&ap.despacho.fecha&&ap.despacho.fecha<ix.hoy)return null;
+  if(!o&&String(x.f||"")<ymdC(Date.now()-dias*864e5))return null;
+  const cod=iaCod(x),cli=Object.values(S.clientes).find(c=>String(c.codigo)===cod)||null;
+  const con=(o&&o.conta&&o.conta.estado==="retenido")?o.conta:(ap&&ap.conta&&ap.conta.estado==="retenido")?ap.conta:(ap&&ap.conta)||(o&&o.conta)||null;
+  const cr=cli&&cli.retenido;
+  const it={k,dep:x.d,n:String(x.n),cod,nm:x.nm||"",e:"Facturada"+(x.fa&&x.fa!=="0"?" "+x.fa:""),f:x.f||"",h:x.h||"",cj:Number(x.cj)||(o?Number(o.bultos)||0:0),mo:Number(x.mo)||0,o,ap,cli,
+    nombre:cli?cli.nombre:x.nm,ruta:o&&o.ruta?o.ruta:(cli?cli.ruta:""),fact:true,
+    ven:(ap&&ap.ventas&&(ap.ventas.nota||ap.ventas.fecha))?ap.ventas:null,con,cliRet:cr||null,
+    est:cr||(con&&con.estado==="retenido")?"ret":"ok"};
+  rtCache.set(k,it);return it;
+}
 const fechaCorta=f=>f?f.split("-").reverse().join("/"):"";
 function rtEntradas(){
-  apItems();
-  const deps=misDeps(),hoy=hoyYmd(),out=[];
+  apItems();rtCache=new Map();
+  const deps=misDeps(),hoy=hoyYmd(),out=[],ix=rtIndice();
   for(const [id,x] of Object.entries(S.panel||{})){
     if(x.tipo!=="cli"||!deps.includes(x.dep))continue;
-    const live=(x.pf||[]).map(k=>apCache.get(k)).filter(Boolean);
+    const live=(x.pf||[]).map(k=>rtItem(k,ix,10)).filter(Boolean);
     if(!live.length)continue;
     const enPf=new Set(x.pf||[]);
     const extra=[...apCache.values()].filter(it=>it.dep===x.dep&&String(it.cod)===String(x.codigo)&&!enPf.has(it.k));
@@ -7476,7 +7502,7 @@ function rtVisibles(){
 function rtCandidatos(q){
   apItems();q=norm(q);if(!q)return [];
   const deps=misDeps().filter(puedeDet),g=new Map();
-  for(const it of apCache.values()){
+  for(const it of rtDisponibles()){
     if(!deps.includes(it.dep))continue;
     const k=it.dep+"|"+it.cod;
     if(!g.has(k))g.set(k,{dep:it.dep,cod:it.cod,nombre:it.nombre||it.nm||"",items:[],cli:it.cli});
@@ -7487,13 +7513,18 @@ function rtCandidatos(q){
     .map(c=>({dep:rtDepCli(c.codigo),cod:String(c.codigo),nombre:c.nombre,items:[],cli:c}));
   return out.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).slice(0,12).concat(sinPf);
 }
+function rtDisponibles(){
+  const ix=rtIndice(),out=[...apCache.values()];
+  for(const k of ix.ia.keys())if(!apCache.has(k)){const it=rtItem(k,ix,3);if(it)out.push(it)}
+  return out;
+}
 function rtPintarSug(){
   const box=$("#rt-sug");if(!box)return;
   const q=($("#rt-cq")||{}).value||"";
   if(!q.trim()){box.innerHTML="";return}
   const c=rtCandidatos(q);
   box.innerHTML=c.length?c.map(x=>`<button type="button" class="rt-sugb" data-rtc="${esc(x.dep)}|${esc(x.cod)}"><b>${esc(x.nombre)}</b> <span class="note mono">N.º ${esc(x.cod)}</span> <span class="kc ${x.dep==="P"?"pend":"mut"}">${DEP_TXT[x.dep]}</span>
-    <span class="note">${x.items.length?`${x.items.length} proforma${x.items.length==1?"":"s"} sin facturar`:"sin proformas pendientes"}</span>${rtActiva(x.dep,x.cod)?` <span class="kc ok">ya está en Ruta</span>`:""}</button>`).join("")
+    <span class="note">${x.items.length?`${x.items.length} proforma${x.items.length==1?"":"s"} por despachar`:"sin proformas pendientes"}</span>${rtActiva(x.dep,x.cod)?` <span class="kc ok">ya está en Ruta</span>`:""}</button>`).join("")
     :`<div class="note" style="padding:8px">No encuentro ese cliente${misDeps().length===1?" en "+DEP_TXT[misDeps()[0]]:""}.</div>`;
 }
 function rtPintarSel(){
@@ -7501,7 +7532,9 @@ function rtPintarSel(){
   if(!rtSel){box.innerHTML="";box.hidden=true;return}
   apItems();
   const {dep,cod}=rtSel,act=rtActiva(dep,cod);
-  const its=[...apCache.values()].filter(it=>it.dep===dep&&String(it.cod)===String(cod)).sort((a,b)=>(a.f+a.h).localeCompare(b.f+b.h));
+  const its=rtDisponibles().filter(it=>it.dep===dep&&String(it.cod)===String(cod));
+  if(act)for(const it of act.live)if(!its.some(z=>z.k===it.k))its.push(it);
+  its.sort((a,b)=>(a.f+a.h).localeCompare(b.f+b.h));
   const cli=(its[0]&&its[0].cli)||Object.values(S.clientes).find(c=>String(c.codigo)===String(cod))||null;
   const nombre=cli?cli.nombre:(its[0]?its[0].nombre:rtSel.nombre||"");
   const v=act?act.x.ventas||{}:{},enPf=act?new Set(act.x.pf||[]):null,vm=rtMontos();
@@ -7511,10 +7544,10 @@ function rtPintarSel(){
       <div><div class="eyebrow">${act?"Editar en Ruta":"Agregar a Ruta"}</div><div style="font-size:20px"><b>${esc(nombre)}</b> <span class="note mono">N.º ${esc(cod)}</span> <span class="kc ${dep==="P"?"pend":"mut"}">${DEP_TXT[dep]}</span></div>
       <div class="note"><span class="dot" style="--c:${r?rutaColor(r.id):"var(--muted)"};display:inline-block;margin-right:4px"></span>${r?esc(r.nombre):"Sin ruta"}</div></div>
       <button type="button" class="btn small" data-rtx>Cerrar</button></div>
-    ${its.length?`<div class="eyebrow" style="margin-top:4px">Proformas sin facturar en Interakzion · marque las que van</div>
+    ${its.length?`<div class="eyebrow" style="margin-top:4px">Proformas por despachar · marque las que van</div>
     <div class="rt-pfs">${its.map(it=>`<label class="rt-pfl"><input type="checkbox" class="rt-pfc" value="${esc(it.k)}" ${enPf?(enPf.has(it.k)?"checked":""):"checked"}>
-      <span><b class="mono">Proforma ${esc(it.n)}</b> · ${it.f?it.f.slice(6,8)+"/"+it.f.slice(4,6):""} · ${it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?` · <b>${colon(it.mo)}</b>`:""}${enPf&&!enPf.has(it.k)?` <span class="kc pend">nueva</span>`:""}</span></label>`).join("")}</div>`
-    :`<div class="note" style="color:var(--bad)">Este cliente no tiene proformas sin facturar en Interakzion. Cuando haga la proforma, aparece aquí sola.</div>`}
+      <span><b class="mono">Proforma ${esc(it.n)}</b> · ${it.f?it.f.slice(6,8)+"/"+it.f.slice(4,6):""} · ${it.fact?`<span class="kc ok">${esc(it.e)}</span>`:it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?` · <b>${colon(it.mo)}</b>`:""}${enPf&&!enPf.has(it.k)?` <span class="kc pend">nueva</span>`:""}</span></label>`).join("")}</div>`
+    :`<div class="note" style="color:var(--bad)">Este cliente no tiene proformas por despachar en Interakzion. Cuando haga la proforma, aparece aquí sola.</div>`}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
       <div class="field" style="flex:1;min-width:220px"><label for="rt-nota">Detalle para despacho</label><input id="rt-nota" maxlength="200" value="${esc(v.nota||"")}" placeholder="Ej.: Martes ruta Cartago · Encomienda · Entregar en la casa de ella"></div>
       <div class="field"><label for="rt-fecha">Sale desde (opcional)</label><input id="rt-fecha" type="date" value="${esc(v.fecha||"")}"></div>
@@ -7574,7 +7607,7 @@ function rtFila(e){
     const sale=it.ap&&it.ap.despacho&&it.ap.despacho.fecha===hoy;
     const ic=verCobro()?(it.est==="ok"?`<span style="color:var(--ok)" title="Autorizada">✓</span>`:it.est==="ret"?`<span style="color:var(--bad)" title="Retenida">✕</span>`:`<span class="note" title="Por aprobar">…</span>`):"";
     const chk=pm?`<input type="checkbox" class="rt-hoy" data-k="${esc(it.k)}" ${sale?"checked":""} ${it.est==="ok"?"":"disabled"} aria-label="Sale hoy la proforma ${esc(it.n)}">`:"";
-    return `<label class="rt-pf ${sale?"sale":""}">${chk}${ic} <b class="mono">${esc(it.n)}</b> <span class="note">${it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?" · "+colon(it.mo):""}${sale?` · <b style="color:var(--ok)">sale hoy</b>`:""}</span></label>`;
+    return `<label class="rt-pf ${sale?"sale":""}">${chk}${ic} <b class="mono">${esc(it.n)}</b> <span class="note">${it.fact?esc(it.e):it.o?"En bodega":esc(it.e||"")}${it.cj?" · "+cj(it.cj):""}${vm&&it.mo?" · "+colon(it.mo):""}${sale?` · <b style="color:var(--ok)">sale hoy</b>`:""}</span></label>`;
   }).join("");
   const nOk=e.live.filter(it=>it.est==="ok").length;
   const todasHoy=pm&&nOk>0?`<label class="rt-pf" style="border-style:dashed"><input type="checkbox" class="rt-hoyall" data-eid="${esc(e.id)}" ${e.salen.length===nOk?"checked":""}> <b>Todas salen hoy</b></label>`:"";
@@ -7596,10 +7629,10 @@ async function rtGuardarSel(){
   const nota=$("#rt-nota").value.trim(),fecha=$("#rt-fecha").value;
   if(!pf.length){toast("Marque al menos una proforma");return}
   if(!nota&&!fecha){toast("Escriba el detalle para despacho");$("#rt-nota").focus();return}
-  apItems();const it0=apCache.get(pf[0]);
+  rtDisponibles();const it0=apCache.get(pf[0])||rtCache.get(pf[0]);
   const ven={nota,fecha,...apFirma()};
   const id=act?act.id:`C_${dep}_${String(cod).replace(/[^\w-]/g,"")}_${Date.now().toString(36)}`;
-  const quitar=act?(act.x.pf||[]).filter(k=>!pf.includes(k)&&apCache.has(k)):[];
+  const quitar=act?(act.x.pf||[]).filter(k=>!pf.includes(k)&&(apCache.has(k)||rtCache.has(k))):[];
   try{
     const data={tipo:"cli",dep,codigo:String(cod),cliente:it0?(it0.nombre||it0.nm||""):"",clienteId:it0&&it0.cli?it0.cli.id:"",pf,ventas:ven,ts:Date.now()};
     if(act)await patch("panel",id,data);else await put("panel",id,data);
