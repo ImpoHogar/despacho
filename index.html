@@ -1838,6 +1838,7 @@ let closing=null;
    en la ruta de su cliente. No se mueve ni suma cajas. Al registrarla en Recibir se vuelve una tarjeta normal. */
 const IA_EST_TXT=e=>{e=String(e||"");return /^proformado/i.test(e)?"Por alistar":/alisto/i.test(e)?"En alisto":/chequeo/i.test(e)?"En chequeo":/^listo/i.test(e)?"Listo":/factur/i.test(e)?"Facturado":/cotiz/i.test(e)?"Cotizado":e};
 let boardIA=new Map();
+const SOMBRA_DESDE="20261124 17:00",SOMBRA_DESDE_TS=new Date(2026,10,24,17,0,0).getTime();
 function bYmdC(t){const d=new Date(t);return ""+d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0")}
 function bDep(o){const c=String(o.clienteCodigo||"");return o.depto==="P"||o.depto==="B"?o.depto:/^P\d/.test(c)?"P":/^\d/.test(c)?"B":""}
 function iaMapaClaves(){const m=new Map();for(const lst of Object.values(IA.p||{}))for(const x of lst)m.set(x.d+"_"+x.n,x);return m}
@@ -1845,9 +1846,12 @@ function sombras(){
   const ia=boardIA,reg=new Set(),out=[];
   for(const o of Object.values(S.ordenes)){if(o.ejemplo)continue;const n=String(o.proforma||"").trim().replace(/^0+/,"");if(!n)continue;const d=bDep(o);if(d)reg.add(d+"_"+n);else{reg.add("P_"+n);reg.add("B_"+n)}}
   const hace30=bYmdC(Date.now()-30*864e5),hace3=bYmdC(Date.now()-3*864e5);
+  // Arranque en limpio: desde el 24/11/2026 a las 5 p. m. solo cuentan las proformas creadas desde esa hora.
+  const corte=Date.now()>=SOMBRA_DESDE_TS?SOMBRA_DESDE:"";
   const cliCod={};for(const c of Object.values(S.clientes))if(c.codigo)cliCod[String(c.codigo)]=c;
   for(const [k,x] of ia){
     if(reg.has(k))continue;
+    if(corte&&(String(x.f||"")+" "+String(x.h||"00:00").slice(0,5))<corte)continue;
     const fact=(x.fa&&x.fa!=="0")||/factur/i.test(String(x.e||""));
     const lis=/^listo/i.test(String(x.e||""))&&!fact;
     if(!(lis&&String(x.f||"")>=hace30)&&!(fact&&String(x.f||"")>=hace3))continue;
