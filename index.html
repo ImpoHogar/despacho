@@ -7602,7 +7602,7 @@ function rtPintarSel(){
 function renderRuta(){
   const list=$("#rt-list");if(!list)return;
   const ae=document.activeElement,raiz=$("#ap-rutav");
-  if(ae&&raiz&&raiz.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)&&ae.id!=="rt-q"&&ae.id!=="rt-cq")return;
+  if(ae&&raiz&&raiz.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=="checkbox"&&ae.id!=="rt-q"&&ae.id!=="rt-cq")return;
   const vc=verConta(),lg=esLogR()&&!vc,vend=misDeps().some(puedeDet);
   // Notas fijas
   const fb=$("#rt-fijas-box");fb.hidden=!puedeFijas();
@@ -7683,7 +7683,7 @@ async function rtGuardarSel(){
     if(act)await patch("panel",id,data);else await put("panel",id,data);
     for(const k of pf)await apGuardar(k,"ventas",ven);
     for(const k of quitar)await apGuardar(k,"ventas",{nota:"",fecha:"",...apFirma()});
-    rtSel=null;$("#rt-cq").value="";toast(act?"Cambios guardados en Ruta":"Cliente agregado a Ruta");renderRuta();
+    rtSel=null;$("#rt-cq").value="";if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();toast(act?"Cambios guardados en Ruta":"Cliente agregado a Ruta");renderRuta();
   }catch(x){fail(x)}
 }
 function rtRetener(eid){

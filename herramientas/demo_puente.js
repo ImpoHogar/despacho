@@ -136,6 +136,12 @@
     var rutas = [{ id: "R1", nombre: "San José" }, { id: "R2", nombre: "Alajuela" }, { id: "R7", nombre: "Cartago" }, { id: "R9", nombre: "Encomiendas, Guanacaste y Limón" }];
     var clientes = [], prof = [];
     try {
+      if (window.DEMO_SEMILLA) {
+        var Sm = window.DEMO_SEMILLA; rutas = Sm.rutas || rutas; clientes = Sm.clientes;
+        var nm = {}; clientes.forEach(function(c){ nm[c.codigo] = c.nombre; });
+        prof = Sm.prof.map(function(x, i){ return { n: x.n, d: x.d, c: x.c, nm: nm[(x.d === "P" ? "P" : "") + x.c] || x.nm || "", f: x.f || hoyC(), h: x.h || ("0" + (7 + Math.floor(i / 12))).slice(-2) + ":" + String((i * 5) % 60).padStart(2, "0") + ":00", cj: 0, fa: x.fa || "", mo: String(x.mo || 0), pl: x.pl || "", e: x.e }; });
+        throw "listo";
+      }
       if (!tokReal) throw new Error("sin sesión real");
       var st = await real("apiEstado", [tokReal, null]), ix = await real("apiInteraIndice", [tokReal, null]);
       var rr = st.config && st.config.rutas; rr = rr && (rr.rutas || rr); if (Array.isArray(rr) && rr.length) rutas = rr;
@@ -150,12 +156,12 @@
         prof.push({ n: String(x.n), d: x.d, c: String(x.c), nm: c.nombre, f: hoyC(), h: "08:" + String(10 + prof.length * 3).padStart(2, "0") + ":00", cj: 0, fa: "", mo: String(x.mo || Math.round(80000 + Math.random() * 900000)), pl: "", e: EST[prof.length] });
       });
       if (prof.length < 6) throw new Error("pocos datos");
-    } catch (e) {
+    } catch (e) { if (e !== "listo") {
       console.warn("demo: datos inventados (" + e.message + ")");
       clientes = [["P101","Perfumería La Rosa","R1"],["P102","Aromas del Valle","R2"],["2201","Ferretería El Sol","R7"],["2202","Tecno Plus","R1"],["P103","Bella Esencia","R9"],["2203","Distribuidora Pacífico","R9"]]
         .map(function(a){ return { codigo: a[0], nombre: a[1], ruta: a[2], condicion: "contado", plazo: 0 }; });
       prof = clientes.map(function(c, i){ return { n: String(c.codigo[0] === "P" ? 45001 + i : 28501 + i), d: c.codigo[0] === "P" ? "P" : "B", c: c.codigo.replace(/^P/, ""), nm: c.nombre, f: hoyC(), h: "08:" + String(10 + i * 3).padStart(2, "0") + ":00", cj: 0, fa: "", mo: String(150000 + i * 85000), pl: "", e: EST[i + 4] || "Listo" }; });
-    }
+    } }
     var r = llamar("apiPrimerAdmin", [{ nombre: "Luis", usuario: "luis", password: "demo1234", clave: "1000" }]);
     var t = llamar("apiLogin", ["luis", "demo1234"]).r.token;
     var U = function(id, n, u, cl, perm){ return { op: "set", col: "usuarios", id: id, data: { nombre: n, usuario: u, password: "demo1234", clave: cl, permisos: Object.fromEntries(perm.map(function(k){ return [k, true]; })), activo: true } }; };
