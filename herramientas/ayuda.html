@@ -1,0 +1,196 @@
+<!-- AYUDA: «¿Cómo se usa?» por puesto (insertado por herramientas/poner_ayuda.py) -->
+<style>
+.ayuda-fila{display:flex;justify-content:flex-end;margin:14px 0 -4px}
+.ayuda-tab{display:inline-flex;align-items:center;gap:8px;border:2px solid #2563eb;background:#eff6ff;color:#1e3a8a;font-weight:700;font-size:16px;border-radius:999px;padding:8px 18px;cursor:pointer;min-height:44px}
+.ayuda-tab:hover{background:#dbeafe}
+.ayuda-tab .ic,.ayuda-q{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:16px;line-height:1}
+.ayuda-q{border:0;cursor:pointer;width:34px;height:34px;font-size:19px;margin-left:6px;flex:none}
+.ayuda-q:hover{background:#1d4ed8}
+#ayuda{position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+#ayuda[hidden]{display:none}
+#ayuda .ay-box{background:#fff;color:#0f172a;border-radius:18px;max-width:920px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;border-top:6px solid #2563eb}
+#ayuda .ay-hd{padding:20px 24px 8px}
+#ayuda .ay-k{font-size:13px;letter-spacing:.12em;font-weight:700;color:#2563eb;text-transform:uppercase}
+#ayuda h2{font-size:28px;margin:4px 0 2px}
+#ayuda .ay-para{color:#475569;font-size:15px}
+#ayuda .ay-cuerpo{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;padding:10px 24px 8px}
+@media (max-width:760px){#ayuda .ay-cuerpo{grid-template-columns:1fr}}
+#ayuda video{width:100%;border-radius:12px;background:#0b1020;display:block;aspect-ratio:16/9}
+#ayuda .ay-sinvideo{border:2px dashed #cbd5e1;border-radius:12px;padding:18px;color:#64748b;font-size:15px}
+#ayuda ol{margin:0;padding:0;list-style:none;counter-reset:p;display:grid;gap:10px}
+#ayuda li{counter-increment:p;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;font-size:16px;line-height:1.4}
+#ayuda li::before{content:counter(p);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800}
+#ayuda li .ay-ver{border:0;background:none;color:#2563eb;font-weight:700;cursor:pointer;padding:0 0 0 6px;font-size:14px;white-space:nowrap}
+#ayuda .ay-nota{margin:12px 24px 0;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:10px 14px;font-size:15px}
+#ayuda .ay-otras{margin:14px 24px 0;font-size:14px;color:#475569}
+#ayuda .ay-otras button{border:1px solid #93c5fd;background:#eff6ff;color:#1e3a8a;border-radius:999px;padding:6px 12px;margin:4px 6px 0 0;cursor:pointer;font-size:14px}
+#ayuda .ay-otras button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+#ayuda .ay-pie{display:flex;gap:12px;justify-content:flex-end;align-items:center;flex-wrap:wrap;padding:18px 24px 22px}
+#ayuda .ay-pie .note{margin-right:auto;font-size:13px;color:#64748b;max-width:420px}
+#ayuda .ay-pie button{min-height:50px;font-size:17px;border-radius:12px;padding:0 22px;cursor:pointer;font-weight:700}
+#ayuda .ay-cerrar{border:1px solid #cbd5e1;background:#fff;color:#0f172a}
+#ayuda .ay-ok{border:0;background:#16a34a;color:#fff}
+</style>
+<div id="ayuda" hidden role="dialog" aria-modal="true" aria-labelledby="ay-tit"></div>
+<script>
+(function(){
+const V=(n,f)=>({src:"videos/"+f+".mp4",poster:"videos/"+f+".jpg",n});
+const GUIAS={
+ ventas:{titulo:"Ruta para Ventas",para:"Vendedores de Perfumería y de Bodega",tab:"aprobar",video:V(1,"01-ventas"),pasos:[
+  ["Entre con su usuario. Usted trabaja en <b>Ventas y Contabilidad</b>, sección <b>Ruta</b>.",8.2],
+  ["Escriba el nombre del cliente, su número o el número de proforma, y toque al cliente.",15.8],
+  ["Aparecen solas sus proformas de Interakzion. Deje marcadas las que van y escriba el detalle. Ejemplo: «sale el jueves, entregar en la tienda».",24.5],
+  ["Si quiere, ponga desde qué fecha puede salir y toque <b>Agregar a Ruta</b>.",35.2],
+  ["Abajo queda su lista. Si algo cambia, toque <b>Editar detalle o proformas</b>.",41.2]],
+  nota:()=>(yo("ventasB")&&!yo("aprobarV")?"Usted solo ve clientes de <b>Bodega</b>. ":yo("aprobarV")&&!yo("ventasB")?"Usted solo ve clientes de <b>Perfumería</b>. ":"")+"Puede poner el detalle cuando tenga tiempo durante el día: no tiene que ser apenas crea la proforma."},
+ conta:{titulo:"Ventas y Contabilidad",para:"Contabilidad",tab:"aprobar",video:V(2,"02-contabilidad"),pasos:[
+  ["En la sección <b>Ruta</b> ve a cada cliente que mandó Ventas, de Perfumería y de Bodega, con el detalle del vendedor.",9.4],
+  ["Si el pedido puede salir, toque <b>Aprobar</b>. Sin su aprobación no sale en ninguna ruta.",18.5],
+  ["Debajo indique cómo se cobra: efectivo, datáfono, SINPE o transferencia, y el monto. El chofer lo ve en su ruta.",25.2],
+  ["Si falta un pago, toque <b>Retener</b> y escoja el motivo. Puede retener solo ese pedido o todos los del cliente.",33.3],
+  ["Arriba están las <b>notas fijas</b> (cobros de los viernes, garantías, clientes sin autorización). Siempre se ven.",42.3],
+  ["En <b>Proformas por autorizar</b> ve todas las proformas de Interakzion, aunque Ventas no haya puesto el detalle.",51.5],
+  ["Cuando el chofer regresa, en <b>Rutas, choferes y cobros</b> toque <b>Cerrar con el chofer</b> y revise lo cobrado.",59.9]]},
+ rutaLog:{titulo:"Ruta: lo que sale hoy",para:"Logística y Despacho",tab:"aprobar",video:V(5,"05-rutas"),desde:34.5,pasos:[
+  ["Aquí ve solo lo que Contabilidad ya autorizó, con el cobro que indicó.",34.5],
+  ["Marque lo que sale hoy: una por una, o todo junto con <b>Seleccionar todo</b>.",34.5],
+  ["Lea las <b>notas fijas</b> de arriba antes de armar las rutas."],
+  ["Después vaya a la pestaña <b>Rutas</b> para cerrar cada ruta.",44.8]]},
+ rutas:{titulo:"Tablero de Rutas",para:"Logística y Despacho",tab:"rutas",video:V(5,"05-rutas"),pasos:[
+  ["Cada pedido cae solo en la columna de la ruta de su cliente, con su ubicación y sus cajas.",9.0],
+  ["Las tarjetas <b>oscuras con candado</b> ya están listas en Interakzion, pero Alisto no las ha registrado. No se mueven hasta que las registren.",16.0],
+  ["Las tarjetas normales ya están registradas. La <b>C con check</b> dice que Contabilidad aprobó.",25.8],
+  ["Para cambiar un pedido de ruta, arrastre la tarjeta o tóquela."],
+  ["Cuando la ruta está lista, toque <b>Cerrar ruta</b> y escoja el chofer y el vehículo.",44.8],
+  ["La herramienta muestra las cajas por cliente y la ruta pasa sola a Facturación con su hoja de ruta.",50.4]]},
+ alisto:{titulo:"Alisto",para:"Jefe de Alisto",tab:"alisto",video:V(3,"03-alisto"),pasos:[
+  ["Aquí están las proformas de Interakzion que faltan por alistar, de Bodega y de Perfumería, agrupadas por ruta.",6.8],
+  ["Van en orden de salida. <b>Rojo</b>: alistar ya. <b>Amarillo</b>: sale hoy más tarde. <b>Gris</b>: sale otro día.",15.6],
+  ["Se actualiza sola cada minuto. Cuando una proforma pasa a «En Alisto» en Interakzion, sale de aquí.",25.0]]},
+ recibir:{titulo:"Recibir pedidos",para:"Alistadores",tab:"recibir",video:V(4,"04-recibir"),pasos:[
+  ["Escriba o escanee el número de proforma. El cliente y la ruta se llenan solos.",7.9],
+  ["Marque <b>timbrado</b> o <b>no timbrado</b>, ponga cuántas cajas lleva y digite su clave.",16.8],
+  ["Toque <b>Registrar</b>. Le dice en qué estante dejarlo y saca la etiqueta para pegar en las cajas.",24.7],
+  ["Abajo ve lo registrado hoy. Al registrar, el pedido deja de verse oscuro en Rutas.",32.9]]},
+ facturar:{titulo:"Facturación",para:"Facturación",tab:"facturar",video:V(6,"06-facturacion"),pasos:[
+  ["Arriba aparecen los pedidos apenas Contabilidad los aprueba, agrupados por ruta.",8.7],
+  ["Al facturar en Interakzion, en un minuto llegan solos el número de factura, el monto y si es contado o crédito.",16.8],
+  ["Cuando todo está facturado y el chofer contó la carga, toque <b>Camión salió</b>.",25.8],
+  ["Más abajo atiende a los clientes que retiran en bodega y recibe devoluciones y garantías.",33.6]]},
+ chofer:{titulo:"Mi ruta",para:"Choferes y ruteros",tab:"carga",video:V(7,"07-choferes"),pasos:[
+  ["Antes de salir, cuente las cajas de cada pedido y escriba el número. Si algo no coincide, le avisa qué revisar.",7.2],
+  ["Luego ve sus paradas en orden, con lo que debe cobrar en cada una.",17.1],
+  ["Donde el cliente, toque <b>Registrar entrega</b>: entregado, cómo pagó, recibo con foto, quién recibió y la firma.",22.0],
+  ["Al final toque <b>Terminé la ruta</b>. Le dice cuánto efectivo entregar en Contabilidad.",30.8]]},
+ hoy:{titulo:"Hoy",para:"Gerencia",tab:"hoy",video:V(8,"08-gerencia"),pasos:[
+  ["Hoy resume todo el día: alertas, lo recibido, lo que hay en bodega, las rutas en la calle y lo cobrado.",7.2],
+  ["Toque <b>Mapa de las rutas</b> para ver los carros."],
+  ["Con <b>Ajustar alertas</b> escoge qué le avisa la herramienta."]]},
+ reportes:{titulo:"Reportes",para:"Gerencia",tab:"reportes",video:V(8,"08-gerencia"),desde:14.6,pasos:[
+  ["Escoja las fechas (hoy, ayer, últimos 7 días, este mes…) y, si quiere, una ruta.",14.6],
+  ["Escoja el reporte y descárguelo en <b>Excel</b> o <b>PDF</b>.",14.6]]},
+ bitacora:{titulo:"Bitácora de movimientos",para:"Administración",tab:"bitacora",video:V(8,"08-gerencia"),desde:19.7,pasos:[
+  ["Aquí está todo lo que se hizo en la herramienta: quién, cuándo y qué cambió.",19.7],
+  ["Filtre por fecha, persona o tipo, o busque una proforma o cliente."],
+  ["Toque <b>Descargar Excel</b> para guardarlo."]]},
+ inventario:{titulo:"Inventario de racks",para:"Bodega",tab:"inventario",pasos:[
+  ["Busque el artículo por nombre o código."],
+  ["Vea cuánto hay en el rack y cuánto falta para llenarlo."],
+  ["Para rellenar, toque <b>Bajar de excedentes</b> o <b>Traer de la bodega 2</b> y anote lo que movió."],
+  ["Lo que registró queda abajo en <b>Ya registrado hoy</b>."]]},
+ gps:{titulo:"GPS",para:"Logística y Gerencia",tab:"gps",pasos:[
+  ["<b>En vivo</b>: los carros en el mapa, desde ProTrack."],
+  ["<b>Recorrido y paradas</b>: escoja el carro y la fecha para ver por dónde anduvo y dónde paró."],
+  ["<b>Reporte del día</b>: el resumen de cada carro."]]},
+ ajustes:{titulo:"Ajustes",para:"Administración",tab:"ajustes",pasos:[
+  ["En <b>Personas, claves y permisos</b> agregue a cada persona y marque qué puede hacer. La clave es de 4 a 6 números y no se repite."],
+  ["Rutas y estantes, vehículos y clientes se cargan aquí, o todo junto con <b>Carga masiva desde Excel</b>."],
+  ["Lo que falta llenar sale en naranja con «Falta llenar»."]]}
+};
+GUIAS.estacion={...GUIAS.recibir,tab:"estacion"};
+const esAdm=()=>yo("ajustes");
+function guiaDe(t){
+  if(t==="contab")t="aprobar";
+  if(t==="aprobar"){
+    if(esAdm())return apVista==="ruta"?"ventas":"conta";
+    if(typeof verConta==="function"&&verConta())return "conta";
+    if(yo("aprobarV")||yo("ventasB"))return "ventas";
+    return "rutaLog";
+  }
+  if(t==="estacion")return "recibir";
+  if(t==="carga")return "chofer";
+  return GUIAS[t]?t:null;
+}
+// Guías que también le sirven a esta persona (según lo que puede abrir)
+function misGuias(){
+  if(!sesion)return [];
+  const l=[];const add=g=>{if(g&&!l.includes(g))l.push(g)};
+  if(esAdm()){Object.keys(GUIAS).filter(g=>g!=="estacion").forEach(add);return l}
+  ["recibir","alisto","inventario","aprobar","rutas","carga","facturar","hoy","gps","reportes","bitacora","ajustes"].forEach(t=>{if(permitido(t))add(guiaDe(t))});
+  if(permitido("aprobar")){if(verConta())add("conta");if(yo("aprobarV")||yo("ventasB"))add("ventas");if(yo("mover")||yo("cerrar"))add("rutaLog")}
+  return l;
+}
+const clave=g=>"despacho.ayuda.ok."+(sesion&&sesion.id||"x")+"."+g;
+const visto=g=>{try{return localStorage.getItem(clave(g))==="1"}catch(e){return true}};
+let actual=null;
+function abrir(g){
+  const G=GUIAS[g];if(!G)return;actual=g;
+  const otras=misGuias().filter(x=>x!==g&&x!=="estacion");
+  const nota=typeof G.nota==="function"?G.nota():G.nota;
+  const el=document.getElementById("ayuda");
+  el.innerHTML=`<div class="ay-box">
+   <div class="ay-hd"><div class="ay-k">¿Cómo se usa? ${G.video?"· video "+G.video.n+" de 8":""}</div><h2 id="ay-tit">${G.titulo}</h2><div class="ay-para">Para: ${G.para}${sesion?` · ${esc(sesion.nombre)}`:""}</div></div>
+   <div class="ay-cuerpo">
+    <div>${G.video?`<video id="ay-vid" controls playsinline preload="none" poster="${G.video.poster}" src="${G.video.src}"></video>`:`<div class="ay-sinvideo">Esta pantalla todavía no tiene video. Siga los pasos de la derecha.</div>`}</div>
+    <ol>${G.pasos.map(p=>`<li><div>${p[0]}${G.video&&p[1]!=null?` <button type="button" class="ay-ver" data-ayt="${p[1]}">▶ ver</button>`:""}</div></li>`).join("")}</ol>
+   </div>
+   ${nota?`<div class="ay-nota">${nota}</div>`:""}
+   ${otras.length?`<div class="ay-otras">${esAdm()?"Guías de los otros puestos:":"Usted también usa:"}<br>${otras.map(x=>`<button type="button" data-ayg="${x}">${GUIAS[x].titulo}</button>`).join("")}</div>`:""}
+   <div class="ay-pie"><div class="note">${visto(g)?"Esta guía ya la marcó como entendida. Puede verla cuando quiera con el botón «?».":"Esta guía se abre sola cada vez que entra, hasta que toque «Ya entendí»."}</div>
+    <button type="button" class="ay-cerrar" data-aycerrar>Cerrar</button><button type="button" class="ay-ok" data-ayok>Ya entendí ✓</button></div></div>`;
+  el.hidden=false;
+  const v=document.getElementById("ay-vid");if(v&&G.desde){v.addEventListener("loadedmetadata",()=>{if(v.currentTime<1)v.currentTime=G.desde},{once:true})}
+}
+function cerrar(){const el=document.getElementById("ayuda");const v=document.getElementById("ay-vid");if(v)try{v.pause()}catch(e){}el.hidden=true;el.innerHTML="";actual=null}
+document.addEventListener("click",e=>{
+  let b;
+  if((b=e.target.closest("[data-ayuda-abrir]"))){const g=guiaDe(tab);if(g)abrir(g);return}
+  if(!e.target.closest("#ayuda"))return;
+  if(e.target.id==="ayuda"||e.target.closest("[data-aycerrar]")){cerrar();return}
+  if(e.target.closest("[data-ayok]")){try{localStorage.setItem(clave(actual),"1")}catch(er){}cerrar();if(typeof toast==="function")toast("Listo. Si la necesita otra vez, toque el botón «?».");return}
+  if((b=e.target.closest("[data-ayg]"))){abrir(b.dataset.ayg);return}
+  if((b=e.target.closest("[data-ayt]"))){const v=document.getElementById("ay-vid");if(v){const t=+b.dataset.ayt;const ir=()=>{v.currentTime=t;v.play().catch(()=>{})};if(v.readyState>=1)ir();else{v.addEventListener("loadedmetadata",ir,{once:true});v.load()}}}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("ayuda").hidden)cerrar()});
+// Botón grande arriba de cada pantalla
+const fila=document.createElement("div");fila.className="ayuda-fila";fila.hidden=true;
+fila.innerHTML=`<button type="button" class="ayuda-tab" data-ayuda-abrir><span class="ic">?</span><span id="ayuda-txt">¿Cómo se usa?</span></button>`;
+const main=document.querySelector("main.wrap");if(main)main.insertBefore(fila,main.firstChild);
+// Ícono «?» en la barra de arriba
+const q=document.createElement("button");q.type="button";q.className="ayuda-q";q.setAttribute("data-ayuda-abrir","");q.title="¿Cómo se usa?";q.setAttribute("aria-label","¿Cómo se usa?");q.textContent="?";q.hidden=true;
+const ss=document.getElementById("sess");if(ss&&ss.parentNode)ss.parentNode.insertBefore(q,ss.nextSibling);
+function pintar(){
+  const g=sesion?guiaDe(tab):null;fila.hidden=!g;q.hidden=!g;
+  const t=document.getElementById("ayuda-txt");if(t&&g)t.textContent="¿Cómo se usa? · "+GUIAS[g].titulo;
+}
+let espera=null;
+function auto(){
+  clearTimeout(espera);let n=0;
+  const intenta=()=>{
+    if(!sesion)return;const g=guiaDe(tab);if(!g||visto(g)||actual)return;
+    const sh=document.getElementById("sheet");const ocupado=(sh&&!sh.hidden&&sh.innerHTML.trim())||(()=>{const en=document.getElementById("entrada");return en&&!en.hidden&&en.offsetParent!==null})();
+    if(ocupado){if(++n<40)espera=setTimeout(intenta,1500);return}
+    abrir(g);
+  };
+  espera=setTimeout(intenta,700);
+}
+const _setTab=setTab;
+setTab=function(t){const r=_setTab.apply(this,arguments);pintar();auto();return r};
+const _rs=renderSesion;
+renderSesion=function(){const r=_rs.apply(this,arguments);pintar();if(sesion)auto();return r};
+document.addEventListener("click",e=>{if(e.target.closest("#ap-vista [data-av]"))setTimeout(pintar,50)});
+window.AYUDA={abrir,guiaDe,GUIAS};
+setTimeout(()=>{pintar();auto()},1200);
+})();
+</script>
+<!-- /AYUDA -->
