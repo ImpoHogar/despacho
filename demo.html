@@ -3677,6 +3677,10 @@ html:has(.kliq),.kliq{overflow-anchor:none}
       <div class="improw"><label class="btn small" style="position:relative;overflow:hidden">Importar personas (Excel)<input type="file" id="np-file" accept=".xlsx,.xls,.csv,text/csv" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button type="button" class="btn small" data-formato>Descargar formato de Excel</button><span class="note">Nombre, clave y puesto de cada persona (y usuario y contraseña para la versión de Google).</span></div>
       <div class="tablewrap"><table id="perm-table" class="permt"></table></div>
       <div class="note">Los cambios en las casillas se guardan al instante. No se puede quitar «Ajustes» a la última persona que lo tiene.</div>
+      <details id="col-rol" open><summary style="cursor:pointer;font-weight:600;font-size:18px">Colaboradores por puesto</summary>
+        <div class="note" style="margin:6px 0">Todas las personas de la herramienta, agrupadas por su puesto (según sus permisos). No muestra claves.</div>
+        <div style="margin-bottom:8px"><button type="button" class="btn small" data-col-xls>Descargar en Excel</button></div>
+        <div id="col-rol-list"></div></details>
     </div>
     <div class="aj">
       <div style="display:grid;gap:20px">
@@ -9669,6 +9673,7 @@ $("#lbl-mode").addEventListener("click",async e=>{const b=e.target.closest("[dat
   const v={...S.opciones,etiquetaModo:b.dataset.m};
   try{await saveOpciones(v);toast(b.dataset.m==="caja"?"Una etiqueta por cada caja":"Una etiqueta por orden")}catch(x){fail(x)}});
 function renderPermisos(){
+  try{renderColaboradores()}catch(er){console.error(er)}
   const t=$("#perm-table");if(!t)return;
   const ps=personas().sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   const grupos=[];PERMISOS.forEach(x=>{const g=grupos.at(-1);if(g&&g.g===x.g)g.n++;else grupos.push({g:x.g,n:1})});
@@ -11169,6 +11174,22 @@ setInterval(()=>{try{
   if(localStorage.getItem(k))return;localStorage.setItem(k,"1");
   rdSelDia="";delete rdUso[String(D.hoy)];toast("Ya está listo el resumen del día: véalo en «Hoy».");renderResumenDia();
 }catch(e){}},60000);
+
+/* COLABORADORES POR PUESTO (Ajustes) */
+const COL_ORDEN=["Administración","Ventas Perfumería","Ventas Bodega","Contabilidad","Facturación","Logística y Despacho","Jefe de Alisto","Alistadores","Choferes","Bodega e Inventario","Otros","Sin permisos"];
+function colPuesto(p){const q=permisosDe(p)||{};if(q.ajustes)return "Administración";if(!Object.values(q).some(Boolean))return "Sin permisos";return rdRol(p)}
+function colGrupos(){const g={};
+  personas().filter(p=>p&&!p.ejemplo&&p.nombre).forEach(p=>{const k=p.activo===false?"Inactivas":colPuesto(p);(g[k]=g[k]||[]).push(p)});
+  Object.values(g).forEach(l=>l.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")));
+  return [...COL_ORDEN,"Inactivas"].filter(k=>g[k]).map(k=>[k,g[k]])}
+function renderColaboradores(){const box=$("#col-rol-list");if(!box)return;const G=colGrupos();
+  const h=G.length?`<div style="display:grid;gap:12px">${G.map(([k,l])=>`<div><div style="font-weight:700">${esc(k)} <span class="note">(${l.length})</span></div><ol style="margin:4px 0 0 20px;padding:0">${l.map(p=>`<li>${esc(p.nombre)}${p.usuario?` <span class="note">· usuario ${esc(p.usuario)}</span>`:""}</li>`).join("")}</ol></div>`).join("")}<div class="note">Total: ${G.reduce((s,[k,l])=>s+(k==="Inactivas"?0:l.length),0)} personas activas.</div></div>`:`<div class="note">Sin personas todavía.</div>`;
+  if(box.innerHTML!==h)box.innerHTML=h}
+document.addEventListener("click",async e=>{if(!e.target.closest("[data-col-xls]"))return;
+  if(!await cargarXLSX()){toast("Para hacer el Excel hace falta internet");return}
+  const filas=[];colGrupos().forEach(([k,l])=>l.forEach(p=>filas.push([k,p.nombre,p.usuario||"",PERMISOS.filter(x=>permisosDe(p)[x.k]).map(x=>x.t).join(", ")])));
+  const ws=XLSX.utils.aoa_to_sheet([["Puesto","Nombre","Usuario","Permisos"],...filas]);ws["!cols"]=[24,30,22,90].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Colaboradores");XLSX.writeFile(wb,"Colaboradores por puesto - Despacho y Rutas.xlsx")});
 /* AYUDA-JS */
 (function(){
 const V=(n,f)=>({src:"videos/"+f+".mp4",poster:"videos/"+f+".jpg",n});
