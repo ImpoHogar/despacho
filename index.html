@@ -214,7 +214,7 @@ section[data-view]{display:grid;gap:20px}
 .rt-selbox{display:grid;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
 .rt-pfs{display:grid;gap:6px}.rt-pfl{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
 .rt-cmonto{width:150px}.rt-cnota{flex:1;min-width:160px}.rt-auto{margin:2px 0 6px}
-#atascos{margin-bottom:20px}.at-hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+#resumen-dia{margin-bottom:20px}.rd-h{margin:16px 0 8px;font-size:16px}.rd-box .at-hd{margin-bottom:4px}.rd-chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:2px 2px;font-size:13px}.rd-box [data-rd][aria-pressed="true"]{background:var(--ink,#222);color:var(--bg,#fff)}#atascos{margin-bottom:20px}.at-hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
 .at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .at-et{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.at-et b{font-size:22px}
 .at-et.mal{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
@@ -758,6 +758,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
         <div class="note">Todo el día en una pantalla: lo recibido, la bodega, las rutas en la calle, lo entregado y cobrado, y lo que hay que atender. Se actualiza solo.</div></div>
       <div class="kquick"><button class="btn dark" type="button" id="hoy-mapa">🗺 Mapa de las rutas</button><button class="btn small" type="button" id="hoy-alertas">Ajustar alertas</button></div>
     </div>
+    <div id="resumen-dia" hidden></div>
     <div id="atascos" hidden></div>
     <div id="tablero" style="display:grid;gap:20px"></div>
   </section>
@@ -4972,6 +4973,7 @@ function numerosHoy(){
     porSalir:porSalir.length,contadas,calle:calle.filter(enCalle).length,par,parHechas,ent:ent+bodHoy.length,entF:entF+bodHoy.reduce((s,c)=>s+(c.items||[]).length,0),noEnt,
     cob,porCob,falta,devs:devs.length,cargasMal:cargasMal.length,faltEf,liqHoy:liqHoy.length,calleLista:calle}}
 function renderTablero(){
+  try{renderResumenDia()}catch(er){console.error(er)}
   try{renderAtascos()}catch(er){console.error(er)}
   const box=$("#tablero");if(!box)return;const ae=document.activeElement;if(ae&&box.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
   const N=numerosHoy(),A=alertas(),vm=N.vm,ahora=Date.now();
@@ -8466,6 +8468,106 @@ function renderAtascos(){
   </div>`;
 }
 document.addEventListener("click",e=>{if(e.target.closest("[data-at-todos]")){atVerTodos=!atVerTodos;renderAtascos()}});
+/* RESUMEN-DIA: resumen automático del día (5 p.m.; sábado 12 m.). Solo administración (Gerencia y Luis).
+   Despachado, pendientes y atascos, rutas que no cuadraron y quién no usó la herramienta. */
+let rdSelDia="",rdUso={},rdUsoCargando="";
+const rdCierreHora=d=>new Date(d).getDay()===6?12:17;
+function rdDiaHabilAnterior(t){const d=new Date(t);d.setHours(0,0,0,0);do{d.setDate(d.getDate()-1)}while(d.getDay()===0);return d.getTime()}
+function rdDias(){const h=new Date();h.setHours(0,0,0,0);const hoy=h.getTime();return {hoy,ayer:rdDiaHabilAnterior(hoy),listoHoy:new Date().getDay()!==0&&new Date().getHours()>=rdCierreHora(hoy)}}
+function rdDiaElegido(){const D=rdDias();const k=rdSelDia||(D.listoHoy?"hoy":"ayer");return {k,d0:k==="hoy"?D.hoy:D.ayer,listo:k!=="hoy"||D.listoHoy}}
+function rdRol(p){const q=permisosDe(p)||{};
+  if(q.cargar)return "Choferes";if(q.facturar)return "Facturación";if(q.aprobarC||q.liquidar)return "Contabilidad";if(q.aprobarV)return "Ventas Perfumería";if(q.ventasB)return "Ventas Bodega";
+  if(q.cerrar||q.mover||q.rutas)return "Logística y Despacho";if(q.alisto)return "Jefe de Alisto";if(q.inventario)return "Bodega e Inventario";if(q.registrar||q.devoluciones)return "Alistadores";return "Otros"}
+function rdGente(){const out=[];
+  for(const [id,u] of Object.entries(S.usuarios||{}))if(u&&!u.ejemplo)out.push({...u,id:u.id||id,_src:"usuarios"});
+  for(const [id,a] of Object.entries(S.alistadores||{}))if(a&&!a.ejemplo)out.push({...a,id:a.id||id,_src:"alistadores"});
+  return out.filter(p=>p.activo!==false&&p.nombre&&!permisosDe(p).ajustes&&Object.values(permisosDe(p)).some(Boolean))}
+async function rdCargarUso(d0){
+  const k=String(d0),u=rdUso[k],hoy=d0===rdDias().hoy;
+  if(rdUsoCargando===k||(u&&(!hoy||Date.now()-u.t<5*6e4)))return;
+  if(!gas||!gasToken){rdUso[k]={t:Date.now(),err:"Para ver quién usó la herramienta hay que entrar con usuario y contraseña."};return}
+  rdUsoCargando=k;
+  try{const r=await gcall("apiBitacora",gasToken,d0,d0+864e5,gasActor);
+    if(!r||r.ok===false)throw new Error((r&&(r.error||r.code))||"error");
+    const ids=new Set(),noms=new Set();
+    (r.filas||[]).forEach(f=>{if(f.quienId)ids.add(String(f.quienId));if(f.quien)noms.add(norm(f.quien))});
+    rdUso[k]={t:Date.now(),ids,noms}}
+  catch(e){rdUso[k]={t:Date.now(),err:"No se pudo leer la bitácora ("+(e&&e.message||e)+")."}}
+  rdUsoCargando="";try{renderResumenDia()}catch(er){console.error(er)}
+}
+function rdCalc(d0){
+  const d1=d0+864e5,inD=t=>(t||0)>=d0&&(t||0)<d1;
+  const cs=Object.values(S.cierres||{}).filter(c=>c&&!c.ejemplo);
+  const sal=cs.filter(c=>c.tipo!=="bodega"&&c.tipo!=="cobrobodega"&&c.estado==="despachado"&&inD(c.salida)).sort((a,b)=>(a.salida||0)-(b.salida||0));
+  const rutas=sal.map(c=>{let t={};try{t=calleTot(c,paradasDe(c))||{}}catch(e){}
+    return {c,ruta:c.rutaNombre||"",chofer:c.ruteroNombre||"",ped:(c.items||[]).length,cj:Number(c.totalBultos)||0,hora:c.salida,cobrar:Number(t.porCobrar)||0,dev:Object.keys(c.devueltos||{}).length}});
+  const bod=cs.filter(c=>c.tipo==="bodega"&&inD(c.salida||c.fecha));
+  const devs=Object.values(S.ordenes||{}).filter(o=>o&&!o.ejemplo&&(o.devoluciones||[]).some(d=>inD(d.fecha)));
+  const liq=cs.filter(c=>liqEstado(c)==="cerrada"&&inD(c.liq.cerradaTs)).map(c=>{let t=c.liq.tot;if(!t)try{t=liqTotales(c,c.liq)}catch(e){t={}}
+    return {c,ruta:c.rutaNombre||(c.tipo==="cobrobodega"?"Entregas en bodega":""),chofer:c.liq.chofer||c.ruteroNombre||"",dif:Number(t.diferencia)||0,falta:Number(t.falta)||0,noEnt:Number(t.noEntregadas)||0,por:c.liq.por||""}});
+  const noCuadran=liq.filter(x=>Math.abs(x.dif)>=1);
+  const sinCerrar=sal.filter(c=>!/^(cerrada|omitida)$/.test(liqEstado(c)));
+  const gente=rdGente(),u=rdUso[String(d0)];
+  const usados=new Set();
+  if(u&&!u.err)gente.forEach(p=>{if(u.ids.has(String(p.id))||u.noms.has(norm(p.nombre)))usados.add(p.id)});
+  Object.values(S.ordenes||{}).forEach(o=>{if(o&&inD(o.recibido)&&o.alistador){const p=gente.find(g=>norm(g.nombre)===norm(o.alistador));if(p)usados.add(p.id)}});
+  const conRuta=new Set();sal.forEach(c=>{if(c.ruteroId)conRuta.add(String(c.ruteroId));if(c.ruteroNombre)conRuta.add(norm(c.ruteroNombre))});
+  const esperados=gente.filter(p=>rdRol(p)!=="Choferes"||conRuta.has(String(p.id))||conRuta.has(norm(p.nombre)));
+  const noUso={};esperados.filter(p=>!usados.has(p.id)).forEach(p=>{(noUso[rdRol(p)]=noUso[rdRol(p)]||[]).push(p.nombre)});
+  return {rutas,bod,devs,liq,noCuadran,sinCerrar,esperados:esperados.length,usaron:esperados.filter(p=>usados.has(p.id)).length,noUso,uso:u};
+}
+function renderResumenDia(){
+  const box=$("#resumen-dia");if(!box)return;
+  if(!yo("ajustes")){box.hidden=true;box.innerHTML="";return}
+  const E=rdDiaElegido(),R=rdCalc(E.d0),esHoy=E.k==="hoy",vm=verMontosUI();
+  if(!R.uso)rdCargarUso(E.d0);
+  const fecha=new Date(E.d0).toLocaleDateString("es-CR",{weekday:"long",day:"numeric",month:"long"});
+  const hora=t=>t?new Date(t).toLocaleTimeString("es-CR",{hour:"numeric",minute:"2-digit"}):"";
+  const tile=(t,v,s,mal)=>`<div class="at-et ${mal?"mal":""}"><span class="note">${t}</span><b>${v}</b><span class="note">${s||""}</span></div>`;
+  const tot=(f)=>R.rutas.reduce((s,x)=>s+f(x),0);
+  // 1. Despachado
+  const desp=`<h4 class="rd-h">1. Lo que salió ${esHoy?"hoy":"ese día"}</h4>
+    <div class="at-grid">${tile("Rutas que salieron",R.rutas.length)}${tile("Pedidos",tot(x=>x.ped))}${tile("Cajas",tot(x=>x.cj))}${vm?tile("Contado por cobrar",colon(tot(x=>x.cobrar)),"según Interakzion"):""}${tile("Entregas en bodega",R.bod.length)}${tile("Pedidos devueltos",R.devs.length,"",R.devs.length>0)}</div>
+    ${R.rutas.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Salió</th><th>Ruta</th><th>Chofer</th><th>Pedidos</th><th>Cajas</th>${vm?"<th>Por cobrar</th>":""}<th>Devueltos</th></tr></thead><tbody>
+      ${R.rutas.map(x=>`<tr><td>${hora(x.hora)}</td><td><b>${esc(x.ruta)}</b></td><td>${esc(x.chofer)}</td><td>${x.ped}</td><td>${x.cj}</td>${vm?`<td>${colon(x.cobrar)}</td>`:""}<td>${x.dev||""}</td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="note">No salió ninguna ruta ${esHoy?"hoy":"ese día"}.</div>`}`;
+  // 2. Pendientes y atascos (solo se puede saber en vivo)
+  let pend="";
+  if(esHoy){let L=[];try{L=atascos()}catch(e){}
+    const tarde=L.filter(z=>z.tarde).sort((a,b)=>(b.lleva-b.lim)-(a.lleva-a.lim)),abiertos=new Set(L.filter(z=>z.id!=="calle").map(z=>z.k)).size;
+    pend=`<h4 class="rd-h">2. Lo que quedó pendiente</h4>
+      <div class="at-grid">${tile("Pedidos sin salir",abiertos)}${AT_ORDEN.filter(([id])=>id!=="calle").map(([id,t])=>{const z=L.filter(y=>y.id===id),r=z.filter(y=>y.tarde).length;return z.length?tile(t,z.length,r?`<b style="color:var(--bad)">${r} atrasado${r==1?"":"s"}</b>`:"al día",r>0):""}).join("")}${tile("Retenidos por Contabilidad",L.filter(z=>z.id==="ret").length)}</div>
+      ${tarde.length?`<div class="note" style="margin-bottom:6px">Los más atrasados (el detalle completo está en «Pedidos atascados»):</div><div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Proforma</th><th>Cliente</th><th>Paso</th><th>Lleva</th><th>Lo tiene</th></tr></thead><tbody>
+        ${tarde.slice(0,10).map(z=>`<tr class="mal"><td class="mono"><b>${esc(z.n)}</b> ${z.dep==="P"?"Perf.":"Bod."}</td><td>${esc(z.cli)}</td><td>${esc(z.t)}</td><td><b>${atDur(z.lleva)}</b> <span class="note">(máx. ${atDur(z.lim)})</span></td><td>${esc(z.quien)}</td></tr>`).join("")}</tbody></table></div>`
+        :`<div class="note">Ningún pedido atrasado.</div>`}`;
+  }else pend=`<h4 class="rd-h">2. Lo que quedó pendiente</h4><div class="note">Lo pendiente se ve solo en vivo: abra «Hoy» o vea «Pedidos atascados» arriba.</div>`;
+  // 3. Rutas que no cuadraron
+  const cuad=`<h4 class="rd-h">3. Rutas que no cuadraron</h4>
+    ${R.noCuadran.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Ruta</th><th>Chofer</th><th>Diferencia</th><th>Cerró</th></tr></thead><tbody>
+      ${R.noCuadran.map(x=>`<tr class="mal"><td><b>${esc(x.ruta)}</b></td><td>${esc(x.chofer)}</td><td><b>${vm?(x.dif<0?"Faltante ":"Sobrante ")+colon(Math.abs(x.dif)):(x.dif<0?"Faltante":"Sobrante")}</b></td><td>${esc(x.por)}</td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="note">${R.liq.length?`Las ${R.liq.length} ruta${R.liq.length==1?"":"s"} que cerraron con Contabilidad cuadraron.`:"Ninguna ruta cerró con Contabilidad todavía."}</div>`}
+    ${R.sinCerrar.length?`<div class="note" style="margin-top:8px"><b style="color:var(--warn)">Salieron y todavía no cierran con el chofer:</b> ${R.sinCerrar.map(c=>esc(c.rutaNombre||"")+(c.ruteroNombre?" ("+esc(c.ruteroNombre)+")":"")).join(", ")}</div>`:""}`;
+  // 4. Quién no usó la herramienta
+  let uso="";const U=R.uso;
+  if(!U)uso=`<div class="note">Revisando la bitácora…</div>`;
+  else if(U.err)uso=`<div class="note">${esc(U.err)}</div>`;
+  else{const g=Object.entries(R.noUso).sort((a,b)=>a[0].localeCompare(b[0]));
+    uso=`<div class="note" style="margin-bottom:6px">Usaron la herramienta <b>${R.usaron} de ${R.esperados}</b> personas${esHoy&&!E.listo?" hasta ahora":""}. Los choferes cuentan solo si tuvieron ruta ese día; administración no se cuenta.</div>
+      ${g.length?`<div style="display:grid;gap:6px">${g.map(([rol,ns])=>`<div><span class="note">${esc(rol)}:</span> ${ns.sort().map(n=>`<span class="rd-chip">${esc(n)}</span>`).join(" ")}</div>`).join("")}</div>`:`<div class="note">Todos la usaron. 👍</div>`}`}
+  const usoH=`<h4 class="rd-h">4. Quién no usó la herramienta</h4>${uso}`;
+  box.hidden=false;
+  box.innerHTML=`<div class="panel at-box rd-box"><div class="at-hd"><div><h3 style="margin:0">Resumen del día · <span style="text-transform:capitalize">${esc(fecha)}</span></h3>
+    <div class="note">${esHoy&&!E.listo?`<b>Va por la mitad del día:</b> el resumen se cierra solo a las ${rdCierreHora(E.d0)===12?"12 m.":"5 p.m."}`:"Se arma solo a las 5 p.m. (sábados a las 12 m.)"}. Solo lo ve administración.</div></div>
+    <div class="kquick"><button type="button" class="btn small" data-rd="hoy" aria-pressed="${E.k==="hoy"}">Hoy</button><button type="button" class="btn small" data-rd="ayer" aria-pressed="${E.k==="ayer"}">Día hábil anterior</button></div></div>
+    ${desp}${pend}${cuad}${usoH}</div>`;
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rd]");if(b){rdSelDia=b.dataset.rd;renderResumenDia()}});
+setInterval(()=>{try{
+  if(!sesion||!yo("ajustes"))return;const D=rdDias();if(!D.listoHoy)return;
+  const k="despacho.resumen.aviso."+(sesion.id||sesion.usuario||"")+"."+D.hoy;
+  if(localStorage.getItem(k))return;localStorage.setItem(k,"1");
+  rdSelDia="";delete rdUso[String(D.hoy)];toast("Ya está listo el resumen del día: véalo en «Hoy».");renderResumenDia();
+}catch(e){}},60000);
 /* AYUDA-JS */
 (function(){
 const V=(n,f)=>({src:"videos/"+f+".mp4",poster:"videos/"+f+".jpg",n});
