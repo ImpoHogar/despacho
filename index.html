@@ -214,6 +214,12 @@ section[data-view]{display:grid;gap:20px}
 .rt-selbox{display:grid;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
 .rt-pfs{display:grid;gap:6px}.rt-pfl{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
 .rt-cmonto{width:150px}.rt-cnota{flex:1;min-width:160px}.rt-auto{margin:2px 0 6px}
+#atascos{margin-bottom:20px}.at-hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.at-et{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.at-et b{font-size:22px}
+.at-et.mal{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.at-tab{width:100%;border-collapse:collapse;font-size:14px}.at-tab th{text-align:left;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 8px}
+.at-tab td{border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top}.at-tab tr.mal td{color:var(--bad)}.at-tab tr.mal td b{color:var(--bad)}
 .rt-cmonto,.rt-cnota{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
 .ap2 .ap-vfecha{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)}
 .ia-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:99px;border:1.5px solid var(--ok);color:var(--ok);vertical-align:1px}
@@ -752,6 +758,7 @@ html:has(.kliq),.kliq{overflow-anchor:none}
         <div class="note">Todo el día en una pantalla: lo recibido, la bodega, las rutas en la calle, lo entregado y cobrado, y lo que hay que atender. Se actualiza solo.</div></div>
       <div class="kquick"><button class="btn dark" type="button" id="hoy-mapa">🗺 Mapa de las rutas</button><button class="btn small" type="button" id="hoy-alertas">Ajustar alertas</button></div>
     </div>
+    <div id="atascos" hidden></div>
     <div id="tablero" style="display:grid;gap:20px"></div>
   </section>
 
@@ -4965,6 +4972,7 @@ function numerosHoy(){
     porSalir:porSalir.length,contadas,calle:calle.filter(enCalle).length,par,parHechas,ent:ent+bodHoy.length,entF:entF+bodHoy.reduce((s,c)=>s+(c.items||[]).length,0),noEnt,
     cob,porCob,falta,devs:devs.length,cargasMal:cargasMal.length,faltEf,liqHoy:liqHoy.length,calleLista:calle}}
 function renderTablero(){
+  try{renderAtascos()}catch(er){console.error(er)}
   const box=$("#tablero");if(!box)return;const ae=document.activeElement;if(ae&&box.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
   const N=numerosHoy(),A=alertas(),vm=N.vm,ahora=Date.now();
   const tile=(t,big,sub,go,cls)=>`<button type="button" class="hy-t ${cls||""}" ${go?`data-hy-go="${go}"`:"disabled"}><span class="note">${t}</span><b>${big}</b><span class="note">${sub||""}</span></button>`;
@@ -8355,6 +8363,70 @@ async function arrancar(){
 arrancar();
 setInterval(()=>{if(!modoEstacion)return;if(gas){if(gasToken)gcall("apiLatido",gasToken).catch(()=>{})}else fetch("/api/latido",{method:"POST"}).catch(()=>{})},10000);
 if(tab==="estacion"&&!gas)fetch("/api/latido",{method:"POST"}).catch(()=>{});
+
+/* ======== Pedidos atascados (solo administración / Gerencia) ========
+   Límites que fijó Luis (25 nov 2026). Alisto: según el tamaño del pedido (monto), de 10 min a 1 h 30 (₡15 millones o más),
+   contando alisto, chequeo, empaque y registro. «Por alistar» no tiene límite. */
+const AT_MIN=6e4,AT_H=36e5;
+const AT_LIM={lista:45*AT_MIN,ventas:4*AT_H,conta:2*AT_H,ruta:24*AT_H,salida:AT_H,calle:10*AT_H};
+const atLimAlisto=mo=>Math.round((10+80*Math.min(1,Math.max(0,(Number(mo)||0)/15e6)))*AT_MIN);
+const atDur=ms=>{ms=Math.max(0,ms);const m=Math.round(ms/AT_MIN);if(m<60)return m+" min";const h=Math.floor(m/60),r=m%60;if(h<24)return h+" h"+(r?" "+r+" min":"");const d=Math.floor(h/24);return d+" día"+(d==1?"":"s")+(h%24?" "+(h%24)+" h":"")};
+const atCreada=x=>{const f=String(x.f||""),h=String(x.h||"00:00:00");if(f.length!==8)return 0;return new Date(+f.slice(0,4),+f.slice(4,6)-1,+f.slice(6,8),+h.slice(0,2)||0,+h.slice(3,5)||0).getTime()};
+let atVerTodos=false;
+function atascos(){
+  const ix=rtIndice(),ahora=Date.now(),out=[];
+  for(const [k,x] of ix.ia){
+    const creada=atCreada(x);if(!creada||creada<SOMBRA_DESDE_TS)continue;
+    const o=ix.ord.get(k)||null,ap=(S.aprob||{})[k]||null,c=o&&o.cierreId?S.cierres[o.cierreId]:null;
+    if(c&&c.liq&&c.liq.cerradaTs)continue;                    // ya cerró con el chofer
+    if(o&&/^(entregado|devuelto)$/.test(o.estado||"")&&!c)continue;
+    const fact=(x.fa&&x.fa!=="0")||/^factur/i.test(String(x.e||""));
+    if(!o&&!IA_VIVOS.test(String(x.e||""))&&!fact)continue;   // anulada u otro estado
+    const cli=o&&o.clienteId?S.clientes[o.clienteId]:Object.values(S.clientes).find(z=>String(z.codigo)===iaCod(x));
+    const base={k,n:x.n,dep:x.d,cli:cli?cli.nombre:(x.nm||""),mo:Number(x.mo)||0,e:x.e||""};
+    const et=[];                                                // etapas abiertas de este pedido
+    // Camino físico: alisto → registro → ruta → salida → calle
+    if(c){
+      if(c.estado==="despachado")et.push({id:"calle",t:"En la calle",quien:c.ruteroNombre||"Chofer",desde:c.salida||0,lim:AT_LIM.calle});
+      else et.push({id:"salida",t:"Ruta cerrada sin salir",quien:"Facturación",desde:c.fecha||0,lim:AT_LIM.salida});
+    }else if(!o){
+      const e=String(x.e||"");
+      if(/^proformad/i.test(e))et.push({id:"alistar",t:"Por alistar",quien:"Alisto",desde:x.te||creada,lim:0});
+      else if(/^(listo)/i.test(e)||fact)et.push({id:"lista",t:"Lista sin registrar",quien:"Alistadores",desde:x.tl||0,lim:AT_LIM.lista});
+      else et.push({id:"alisto",t:"Alistando",quien:"Alisto",desde:x.ta||0,lim:atLimAlisto(x.mo)});
+    }
+    // Camino de autorización: Ventas → Contabilidad → ruta
+    const ven=ap&&ap.ventas&&(ap.ventas.nota||ap.ventas.fecha)?ap.ventas:null;
+    const con=(ap&&ap.conta)||(o&&o.conta)||null;
+    if(!c){
+      if(con&&con.estado==="retenido")et.push({id:"ret",t:"Retenido por Contabilidad",quien:"Contabilidad",desde:con.ts||0,lim:0,nota:con.motivo||""});
+      else if(con&&con.estado==="ok"){if(o)et.push({id:"ruta",t:"Aprobada sin ruta",quien:"Logística",desde:Math.max(con.ts||0,o.recibido||0),lim:AT_LIM.ruta})}
+      else if(ven)et.push({id:"conta",t:"Por aprobar",quien:"Contabilidad",desde:ven.ts||0,lim:AT_LIM.conta});
+      else et.push({id:"ventas",t:"Sin detalle de Ventas",quien:x.d==="P"?"Ventas Perfumería":"Ventas Bodega",desde:creada,lim:AT_LIM.ventas});
+    }
+    for(const s of et){const lleva=s.desde?ahora-s.desde:0;out.push({...base,...s,lleva,tarde:!!(s.lim&&s.desde&&lleva>s.lim),sabe:!!s.desde})}
+  }
+  return out;
+}
+const AT_ORDEN=[["alistar","Por alistar"],["alisto","Alistando"],["lista","Lista sin registrar"],["ventas","Sin detalle de Ventas"],["conta","Por aprobar"],["ruta","Aprobada sin ruta"],["salida","Ruta cerrada sin salir"],["calle","En la calle"]];
+function renderAtascos(){
+  const box=$("#atascos");if(!box)return;
+  if(!yo("ajustes")){box.hidden=true;box.innerHTML="";return}
+  const L=atascos(),tarde=L.filter(z=>z.tarde).sort((a,b)=>(b.lleva-b.lim)-(a.lleva-a.lim));
+  const cnt=AT_ORDEN.map(([id,t])=>{const z=L.filter(y=>y.id===id),r=z.filter(y=>y.tarde).length;
+    return `<div class="at-et ${r?"mal":""}"><span class="note">${t}</span><b>${z.length}</b><span class="note">${r?`<b style="color:var(--bad)">${r} atrasado${r==1?"":"s"}</b>`:"al día"}</span></div>`}).join("");
+  const lista=(atVerTodos?L.filter(z=>z.id!=="ret").sort((a,b)=>(b.tarde-a.tarde)||(b.lleva-a.lleva)):tarde);
+  const fila=z=>`<tr class="${z.tarde?"mal":""}"><td class="mono"><b>${esc(z.n)}</b> <span class="kc ${z.dep==="P"?"pend":"mut"}">${z.dep==="P"?"Perf.":"Bod."}</span></td><td>${esc(z.cli)}</td><td>${esc(z.t)}</td>
+    <td>${z.sabe?`<b>${atDur(z.lleva)}</b>`:`<span class="note">sin hora todavía</span>`}</td><td class="note">${z.lim?atDur(z.lim):"—"}</td><td>${esc(z.quien)}</td></tr>`;
+  box.hidden=false;
+  box.innerHTML=`<div class="panel at-box"><div class="at-hd"><div><h3 style="margin:0">Pedidos atascados</h3><div class="note">Cada pedido pendiente, en qué paso está, cuánto lleva ahí y quién lo tiene. En rojo, los que pasaron el tiempo máximo. «Sin hora todavía»: la herramienta empezó a anotar las horas de Alisto el 25 de noviembre a las 9:10 a. m. Solo lo ve administración.</div></div>
+    <button type="button" class="btn small" data-at-todos>${atVerTodos?"Ver solo atrasados":"Ver todos los pendientes"}</button></div>
+    <div class="at-grid">${cnt}</div>
+    ${lista.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Proforma</th><th>Cliente</th><th>Paso</th><th>Lleva</th><th>Máximo</th><th>Lo tiene</th></tr></thead><tbody>${lista.slice(0,80).map(fila).join("")}</tbody></table></div>`
+      :`<div class="note" style="padding:10px 0">${atVerTodos?"No hay pedidos pendientes.":"Ningún pedido atrasado. Todo va a tiempo."}</div>`}
+  </div>`;
+}
+document.addEventListener("click",e=>{if(e.target.closest("[data-at-todos]")){atVerTodos=!atVerTodos;renderAtascos()}});
 /* AYUDA-JS */
 (function(){
 const V=(n,f)=>({src:"videos/"+f+".mp4",poster:"videos/"+f+".jpg",n});
