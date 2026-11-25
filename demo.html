@@ -11146,7 +11146,7 @@ function renderResumenDia(){
   const cuad=`<h4 class="rd-h">3. Rutas que no cuadraron</h4>
     ${R.noCuadran.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Ruta</th><th>Chofer</th><th>Diferencia</th><th>Cerró</th></tr></thead><tbody>
       ${R.noCuadran.map(x=>`<tr class="mal"><td><b>${esc(x.ruta)}</b></td><td>${esc(x.chofer)}</td><td><b>${vm?(x.dif<0?"Faltante ":"Sobrante ")+colon(Math.abs(x.dif)):(x.dif<0?"Faltante":"Sobrante")}</b></td><td>${esc(x.por)}</td></tr>`).join("")}</tbody></table></div>`
-      :`<div class="note">${R.liq.length?`Las ${R.liq.length} ruta${R.liq.length==1?"":"s"} que cerraron con Contabilidad cuadraron.`:"Ninguna ruta cerró con Contabilidad todavía."}</div>`}
+      :`<div class="note">${R.liq.length?(R.liq.length==1?"La ruta que cerró con Contabilidad cuadró.":`Las ${R.liq.length} rutas que cerraron con Contabilidad cuadraron.`):"Ninguna ruta cerró con Contabilidad todavía."}</div>`}
     ${R.sinCerrar.length?`<div class="note" style="margin-top:8px"><b style="color:var(--warn)">Salieron y todavía no cierran con el chofer:</b> ${R.sinCerrar.map(c=>esc(c.rutaNombre||"")+(c.ruteroNombre?" ("+esc(c.ruteroNombre)+")":"")).join(", ")}</div>`:""}`;
   // 4. Quién no usó la herramienta
   let uso="";const U=R.uso;
@@ -11157,8 +11157,8 @@ function renderResumenDia(){
       ${g.length?`<div style="display:grid;gap:6px">${g.map(([rol,ns])=>`<div><span class="note">${esc(rol)}:</span> ${ns.sort().map(n=>`<span class="rd-chip">${esc(n)}</span>`).join(" ")}</div>`).join("")}</div>`:`<div class="note">Todos la usaron. 👍</div>`}`}
   const usoH=`<h4 class="rd-h">4. Quién no usó la herramienta</h4>${uso}`;
   box.hidden=false;
-  box.innerHTML=`<div class="panel at-box rd-box"><div class="at-hd"><div><h3 style="margin:0">Resumen del día · <span style="text-transform:capitalize">${esc(fecha)}</span></h3>
-    <div class="note">${esHoy&&!E.listo?`<b>Va por la mitad del día:</b> el resumen se cierra solo a las ${rdCierreHora(E.d0)===12?"12 m.":"5 p.m."}`:"Se arma solo a las 5 p.m. (sábados a las 12 m.)"}. Solo lo ve administración.</div></div>
+  box.innerHTML=`<div class="panel at-box rd-box"><div class="at-hd"><div><h3 style="margin:0">Resumen del día · ${esc(fecha.charAt(0).toUpperCase()+fecha.slice(1))}</h3>
+    <div class="note">${esHoy&&!E.listo?`<b>Va por la mitad del día:</b> el resumen se cierra solo a las ${rdCierreHora(E.d0)===12?"12 m":"5 p.m"}`:"Se arma solo a las 5 p.m. (sábados a las 12 m)"}. Solo lo ve administración.</div></div>
     <div class="kquick"><button type="button" class="btn small" data-rd="hoy" aria-pressed="${E.k==="hoy"}">Hoy</button><button type="button" class="btn small" data-rd="ayer" aria-pressed="${E.k==="ayer"}">Día hábil anterior</button></div></div>
     ${desp}${pend}${cuad}${usoH}</div>`;
 }
