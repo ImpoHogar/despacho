@@ -1807,7 +1807,7 @@ $("#rxform").addEventListener("submit",async e=>{
     const junto=ubicManual?null:ubicDelCliente("n:"+norm(cli?cli.nombre:nombre),ruta,id);
     const ubic=ubicManual||(junto?junto.ubic:siguienteUbic(letra));
     rxJunto=junto?{ubic:junto.ubic,proforma:junto.proforma}:null;
-    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,timbrado:rxTimb,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false,...(rxIA&&String(rxIA.n)===proforma.replace(/^0+/,"")?{depto:rxIA.d}:{})};
+    const o={proforma,cliente:cli?cli.nombre:nombre,clienteId:cli?cli.id:null,clienteCodigo:cliCod(cli)||($("#rx-newcod").value.trim()),bultos,alistador,timbrado:rxTimb,recibido:Date.now(),ubic,ruta,estado:"bodega",cierreId:null,ejemplo:false,...(rxIA&&String(rxIA.n)===proforma.replace(/^0+/,"")?{depto:rxIA.d,iaTa:rxIA.ta||0,iaTc:rxIA.tc||0,iaTl:rxIA.tl||0}:{})};
     await put("ordenes",id,o);
     ultimaOrden={id,...o};
 
@@ -7924,6 +7924,7 @@ $("#board-ret").addEventListener("click",openRetenidos);
 const REPORTES=[
   {id:"despachos",t:"Cajas despachadas",d:"Por día y por ruta"},
   {id:"alistadores",t:"Por alistador",d:"Órdenes y cajas registradas"},
+  {id:"tiemposAlisto",t:"Tiempos de Alisto",d:"Cuánto duró cada alistador en alisto, chequeo y empaque con registro",adm:true},
   {id:"devoluciones",t:"Devoluciones",d:"Pedidos que regresaron a bodega, por motivo y por cliente"},
   {id:"bodega",t:"Entregas en bodega",d:"Quién retiró y cuándo"},
   {id:"tiempos",t:"Tiempos",d:"De registro a salida del camión"},
@@ -7951,8 +7952,8 @@ function setRango(k){
 function rango(){const a=$("#rp-desde").value,b=$("#rp-hasta").value;return [a?new Date(a+"T00:00:00").getTime():0,b?new Date(b+"T23:59:59.999").getTime():Date.now()]}
 async function actualizarReportes(force){
   if(!$("#rp-desde").value)setRango("7");
-  if(!REPORTES.some(r=>r.id===repSel&&(!r.montos||verMontosUI())))repSel="despachos";
-  $("#rp-tipos").innerHTML=REPORTES.filter(r=>!r.montos||verMontosUI()).map(r=>`<button type="button" class="rpcard" data-rep="${r.id}" aria-pressed="${repSel===r.id}"><b>${esc(r.t)}</b><span>${esc(r.d)}</span></button>`).join("");
+  if(!REPORTES.some(r=>r.id===repSel&&(!r.montos||verMontosUI())&&(!r.adm||yo("ajustes"))))repSel="despachos";
+  $("#rp-tipos").innerHTML=REPORTES.filter(r=>(!r.montos||verMontosUI())&&(!r.adm||yo("ajustes"))).map(r=>`<button type="button" class="rpcard" data-rep="${r.id}" aria-pressed="${repSel===r.id}"><b>${esc(r.t)}</b><span>${esc(r.d)}</span></button>`).join("");
   const [d,h]=rango();const key=d+"|"+h;
   const servidor=typeof standalone!=="undefined"&&!standalone&&typeof api==="function";
   if(servidor){
@@ -7979,6 +7980,25 @@ function calcReporte(id,D,d,h){
       cols:["Fecha","Ruta","Facturas","Clientes","Cajas","Devueltos"],
       rows:cs.map(c=>[fmtDia(salidaDe(c)),c.rutaNombre+(c.tipo==="bodega"?" · "+c.cliente:""),c.items.length,new Set(c.items.map(i=>i.cliente)).size,c.totalBultos,Object.keys(c.devueltos||{}).length]),
       vacio:"No salió ninguna ruta en estas fechas."};
+  }
+  if(id==="tiemposAlisto"){
+    // Horas que anota la herramienta desde el 25 nov 2026: inicio de alisto (iaTa), de chequeo (iaTc), lista (iaTl) y registro en Recibir.
+    const mins=ms=>ms>0?Math.round(ms/6e4):null,fm=m=>m==null?"—":(m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min");
+    const os=D.ordenes.filter(o=>inR(o.recibido||0)&&(o.iaTa||o.iaTl)).sort((a,b)=>b.recibido-a.recibido);
+    const ixA=rtIndice(),moDe=o=>Number(o.monto)||Number((ixA.ia.get((o.depto||"P")+"_"+String(o.proforma).replace(/^0+/,""))||{}).mo)||0;
+    const fila=o=>{const al=o.iaTa&&(o.iaTc||o.iaTl)?mins((o.iaTc||o.iaTl)-o.iaTa):null,ch=o.iaTc&&o.iaTl?mins(o.iaTl-o.iaTc):null,
+      em=o.iaTl?mins(o.recibido-o.iaTl):null,tot=o.iaTa?mins(o.recibido-o.iaTa):null,lim=Math.round(atLimAlisto(moDe(o))/6e4);
+      return {o,al,ch,em,tot,lim,tarde:tot!=null&&tot>lim||(em!=null&&em>45)}};
+    const F=os.map(fila),g={};
+    F.forEach(f=>{const k=f.o.alistador||"(sin nombre)";g[k]=g[k]||{n:0,al:[],ch:[],em:[],tot:[],tarde:0};const x=g[k];x.n++;["al","ch","em","tot"].forEach(c=>{if(f[c]!=null)x[c].push(f[c])});if(f.tarde)x.tarde++});
+    const prom=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
+    return {titulo:"Tiempos de Alisto por alistador",
+      kpis:[["Pedidos medidos",F.length],["Promedio total",fm(prom(F.map(f=>f.tot).filter(v=>v!=null)))],["Fuera de tiempo",F.filter(f=>f.tarde).length]],
+      resumen:{titulo:"Promedio por alistador",cols:["Alistador","Pedidos","Alisto","Chequeo","Empaque y registro","Total","Fuera de tiempo"],
+        rows:Object.entries(g).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>[k,v.n,fm(prom(v.al)),fm(prom(v.ch)),fm(prom(v.em)),fm(prom(v.tot)),v.tarde])},
+      cols:["Fecha","Proforma","Cliente","Alistador","Cajas","Alisto","Chequeo","Empaque y registro","Total","Máximo","¿A tiempo?"],
+      rows:F.map(f=>[fmtDia(f.o.recibido)+" "+new Date(f.o.recibido).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),f.o.proforma,f.o.cliente,f.o.alistador||"",f.o.bultos||0,fm(f.al),fm(f.ch),fm(f.em),fm(f.tot),fm(f.lim),f.tot==null&&f.em==null?"—":f.tarde?"No":"Sí"]),
+      vacio:"Todavía no hay pedidos medidos en estas fechas. La herramienta empezó a anotar las horas de Alisto el 25 de noviembre de 2026 a las 9:10 a. m.; se miden los pedidos que empezaron el alisto desde entonces."};
   }
   if(id==="alistadores"){
     const os=D.ordenes.filter(o=>inR(o.recibido||0));const g={};
