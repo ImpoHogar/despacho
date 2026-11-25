@@ -11284,8 +11284,8 @@ function abrir(g){
    </div>
    ${nota?`<div class="ay-nota">${nota}</div>`:""}
    ${otras.length?`<div class="ay-otras">${esAdm()?"Guías de los otros puestos:":"Usted también usa:"}<br>${otras.map(x=>`<button type="button" data-ayg="${x}">${GUIAS[x].titulo}</button>`).join("")}</div>`:""}
-   <div class="ay-pie"><div class="note">${visto(g)?"Esta guía ya la marcó como entendida. Puede verla cuando quiera con el botón «?».":"Esta guía se abre sola cada vez que entra, hasta que toque «Ya entendí»."}</div>
-    <button type="button" class="ay-cerrar" data-aycerrar>Cerrar</button><button type="button" class="ay-ok" data-ayok>Ya entendí ✓</button></div></div>`;
+   <div class="ay-pie"><div class="note">Puede volver a verla cuando quiera con el botón «?».</div>
+    <button type="button" class="ay-ok" data-aycerrar>Cerrar</button></div></div>`;
   el.hidden=false;
   const v=document.getElementById("ay-vid");if(v&&G.desde){v.addEventListener("loadedmetadata",()=>{if(v.currentTime<1)v.currentTime=G.desde},{once:true})}
 }
@@ -11323,12 +11323,12 @@ function auto(){
   espera=setTimeout(intenta,700);
 }
 const _setTab=setTab;
-setTab=function(t){const r=_setTab.apply(this,arguments);pintar();auto();return r};
+setTab=function(t){const r=_setTab.apply(this,arguments);pintar();return r};
 const _rs=renderSesion;
-renderSesion=function(){const r=_rs.apply(this,arguments);pintar();if(sesion)auto();return r};
+renderSesion=function(){const r=_rs.apply(this,arguments);pintar();return r};
 document.addEventListener("click",e=>{if(e.target.closest("#ap-vista [data-av]"))setTimeout(pintar,50)});
 window.AYUDA={abrir,guiaDe,GUIAS};
-setTimeout(()=>{pintar();auto()},1200);
+setTimeout(pintar,1200);  // la guía ya no se abre sola: solo con el botón «?» o «¿Cómo se usa?»
 })();
 /* /AYUDA-JS */
 })();
