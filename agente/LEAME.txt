@@ -29,6 +29,7 @@ Que hace:
     version nueva en la pagina de Despacho; si hay, la baja, revisa que llego completa
     y sin errores, guarda la anterior en la carpeta "respaldo" y la pone en su lugar.
     Ya no hay que descomprimir ni volver a instalar nada.
+    (Version 4.2.1: prueba de la actualizacion automatica.)
   Solo LEE las tablas: no cambia nada en Interakzion (de la tabla de usuarios solo
   lee el codigo y el nombre, nunca las claves).
 

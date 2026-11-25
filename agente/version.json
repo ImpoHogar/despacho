@@ -1,5 +1,5 @@
 {
- "version": "4.2",
+ "version": "4.2.1",
  "archivos": [
   {
    "nombre": "agente.ps1",
@@ -27,7 +27,7 @@
   },
   {
    "nombre": "LEAME.txt",
-   "sha256": "91DD34C1F664BBD147CB7458ECF1FAA09AD7E6F71DD46D19ED06A65324BB78D9"
+   "sha256": "87A62E3A259D6D56177435C5E65A443D03336C7055C3CA3E2DB9E915AF800324"
   },
   {
    "nombre": "1. ACTUALIZAR E INSTALAR.bat",
