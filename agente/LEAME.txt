@@ -1,0 +1,48 @@
+DESPACHO Y RUTAS - ENLACE CON INTERAKZION (version 4.2)
+
+Que hace:
+  - Cada minuto lee las PROFORMAS de Interakzion (Bodega y Perfumeria) y las manda
+    a Despacho: al escribir una proforma en Recibir se llena sola, y Alisto ve el estado.
+  - FACTURACION: con cada proforma manda su monto y, cuando ya se facturo en
+    Interakzion, el numero de factura y el plazo (contado o credito). En Despacho el
+    pedido queda facturado solo, con esos datos fijos (no se escriben a mano), y su
+    ruta avanza sola. Si el agente deja de reportarse mas de 10 minutos, Facturacion
+    permite escribirlos a mano mientras tanto.
+  - Cuando cambia la tabla de CLIENTES de Interakzion (o cada 30 minutos) manda los
+    clientes de los dos sistemas. En Despacho:
+      * Se crean solos los clientes que no estaban y ya tienen una proforma,
+        con una ruta sugerida por su direccion o canton (Carlos la puede cambiar).
+      * Si en Interakzion cambian el nombre, el telefono o la direccion, se actualiza.
+      * Si en Despacho falta el telefono o la direccion, se llena con lo de Interakzion.
+      * NO borra clientes, NO cambia rutas ni condicion de pago de los que ya existen,
+        y respeta lo que se corrigio a mano en Despacho.
+  - Todo lo que cambia queda en la Bitacora de movimientos como
+    "Interakzion (automatico)".
+  - NUEVO en la version 4: cada 5 minutos manda los TIEMPOS DE ALISTO Y CHEQUEO de
+    Interakzion (los mismos del "Reporte Tiempo de Alisto"), con quien alisto, quien
+    chequeo y las unidades y productos de cada proforma. La primera vez manda los
+    del 1 de junio de 2026 en adelante (por eso la instalacion tarda unos minutos).
+    En Despacho se ven en Reportes > "Tiempos de Alisto" (solo administracion).
+    Version 4.1: quien alisto y quien chequeo se toma de la bitacora de movimientos
+    de Interakzion (movs_usu), igual que su "Reporte Tiempo de Alisto".
+  - NUEVO en la version 4.2: SE ACTUALIZA SOLO. Cada 15 minutos revisa si hay una
+    version nueva en la pagina de Despacho; si hay, la baja, revisa que llego completa
+    y sin errores, guarda la anterior en la carpeta "respaldo" y la pone en su lugar.
+    Ya no hay que descomprimir ni volver a instalar nada.
+  Solo LEE las tablas: no cambia nada en Interakzion (de la tabla de usuarios solo
+  lee el codigo y el nombre, nunca las claves).
+
+Instalar o actualizar (una sola vez):
+  1. Descomprima esta carpeta donde quiera (por ejemplo en Documentos).
+     El instalador busca solo la configuracion (config.json) del agente anterior.
+  2. Doble clic en "1. ACTUALIZAR E INSTALAR.bat".
+  3. Debe decir OK. Desde ahi trabaja solo, sin ventanas.
+  La computadora debe quedar encendida y con la sesion abierta, y con acceso a
+  las unidades Y: (Bodega) y Z: (Perfumeria).
+
+Ver si esta funcionando:
+  "estado.txt" dice la hora de la ultima lectura y si salio OK.
+  "historial.txt" guarda las ultimas lecturas, por si algo fallo en la noche.
+
+Quitarlo:
+  Doble clic en "2. QUITAR (si ya no se usa).bat".
