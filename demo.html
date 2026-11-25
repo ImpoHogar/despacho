@@ -10601,7 +10601,7 @@ function calcReporte(id,D,d,h){
     const fm=m=>m==null||!isFinite(m)?"—":(m<60?(Math.round(m*10)/10)+" min":Math.floor(m/60)+" h "+Math.round(m%60)+" min");
     const prom=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
     const gA={},gC={};
-    T.forEach(x=>{const k=x.ua||"(sin nombre)";const g=gA[k]=gA[k]||{n:0,u:0,am:[],tot:[],tarde:0};g.n++;g.u+=x.u||0;if(x.am)g.am.push(x.am);g.tot.push(x.tot);if(x.tarde)g.tarde++;
+    T.forEach(x=>{const k=x.ua||"Sin alistador en Interakzion";const g=gA[k]=gA[k]||{n:0,u:0,am:[],tot:[],tarde:0};g.n++;g.u+=x.u||0;if(x.am)g.am.push(x.am);g.tot.push(x.tot);if(x.tarde)g.tarde++;
       if(x.cm){const kc=x.uc||x.ua||"(sin nombre)";const c=gC[kc]=gC[kc]||{n:0,cm:[]};c.n++;c.cm.push(x.cm)}});
     const enT=T.filter(x=>!x.tarde).length;
     return {titulo:"Tiempos de Alisto (desde Interakzion)",
@@ -10611,7 +10611,7 @@ function calcReporte(id,D,d,h){
           rows:Object.entries(gA).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,Math.round(g.u),fm(prom(g.am)),g.u?(g.am.reduce((s,v)=>s+v,0)/g.u).toFixed(2):"—",g.tarde]),bar:1},
         {titulo:"Por chequeador",cols:["Chequeador","Pedidos","Chequeo promedio"],rows:Object.entries(gC).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,fm(prom(g.cm))])}],
       cols:["Terminó","Proforma","Depto.","Cliente","Unidades","Productos","Alistó","Alisto","Chequeó","Chequeo","Total","Máximo","¿A tiempo?"],
-      rows:T.map(x=>[fmtDia(x.fin)+" "+new Date(x.fin).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),x.n,x.d==="P"?"Perfumería":"Bodega",x.nm||"",Math.round(x.u||0),x.l||0,x.ua||"—",fm(x.am),x.uc||"—",x.cm?fm(x.cm):"—",fm(x.tot),fm(x.max),x.tarde?"No":"Sí"]),
+      rows:T.map(x=>[fmtDia(x.fin)+" "+new Date(x.fin).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),x.n,x.d==="P"?"Perfumería":"Bodega",x.nm||"",Math.round(x.u||0),x.l||0,x.ua||"Sin anotar",fm(x.am),x.uc||"—",x.cm?fm(x.cm):"—",fm(x.tot),fm(x.max),x.tarde?"No":"Sí"]),
       vacio:D.tiempos?"No hay alistos terminados en estas fechas.":"Todavía no llegan los tiempos de Interakzion. Llegan cuando se instala la versión 4 del agente en la computadora que lee Interakzion."};
   }
   if(id==="alistadores"){
