@@ -213,7 +213,7 @@ section[data-view]{display:grid;gap:20px}
 .rt-sugb:hover,.rt-sugb:focus{border-color:var(--ink)}
 .rt-selbox{display:grid;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
 .rt-pfs{display:grid;gap:6px}.rt-pfl{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
-.rt-cmonto{width:150px}.rt-cnota{flex:1;min-width:160px}
+.rt-cmonto{width:150px}.rt-cnota{flex:1;min-width:160px}.rt-auto{margin:2px 0 6px}
 .rt-cmonto,.rt-cnota{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
 .ap2 .ap-vfecha{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk)}
 .ia-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:99px;border:1.5px solid var(--ok);color:var(--ok);vertical-align:1px}
@@ -7631,6 +7631,21 @@ function renderRuta(){
   $("#rt-bulk").innerHTML=puedeMarcar()?`${marcables.length?`<button class="btn small primary" data-rtall>✓ Seleccionar todo (${marcables.length} autorizada${marcables.length==1?"":"s"})</button>`:""}${marcadas.length?`<button class="btn small" data-rtnone>Quitar las ${marcadas.length} de hoy</button>`:""}`:"";
   list.innerHTML=vis.length?vis.map(rtFila).join(""):`<div class="empty" style="padding:24px">${vend&&!todas.length?"Todavía no hay clientes en Ruta. Búsquelo arriba, escoja sus proformas y escriba el detalle.":"Ningún cliente coincide con este filtro."}</div>`;
 }
+// Monto a cobrar: sale solo de Interakzion (proformas que salen hoy; las de crédito no se cobran)
+const rtCond=(it,e)=>(it.o&&it.o.condicion)||(e.cli&&e.cli.condicion)||"contado";
+function rtMontoAuto(e){
+  const base=e.salen.length?e.salen:e.live.filter(it=>it.est!=="ret");
+  const cont=base.filter(it=>rtCond(it,e)!=="credito"),cred=base.length-cont.length;
+  const sinMo=cont.filter(it=>!(it.mo>0)).length;
+  return {hoy:!!e.salen.length,n:base.length,monto:cont.reduce((t,it)=>t+(it.mo||0),0),cred,cont:cont.length,sinMo,todoCredito:base.length>0&&!cont.length};
+}
+function rtMontoHtml(e){
+  const m=rtMontoAuto(e);
+  if(m.todoCredito)return `<div class="rt-auto"><b>Crédito: no se cobra</b></div>`;
+  if(!rtMontos())return `<div class="rt-auto"><b>${m.cred&&m.cont?"Contado y crédito":"Contado"}</b><div class="note">El monto lo ve Contabilidad (sale de Interakzion).</div></div>`;
+  const de=m.hoy?`${m.n==1?"la proforma que sale":"las "+m.n+" proformas que salen"} hoy`:`sus proformas · se ajusta cuando marquen lo que sale hoy`;
+  return `<div class="rt-auto">Cobrar <b style="font-size:1.1em">${colon(m.monto)}</b><div class="note">Según Interakzion: ${de}.${m.cred?` ${m.cred} a crédito no se cobra${m.cred==1?"":"n"}.`:""}${m.sinMo?` <span style="color:var(--bad)">${m.sinMo} sin monto en Interakzion.</span>`:""}</div></div>`;
+}
 const rtDesde=e=>{const f=(e&&e.x&&e.x.ventas&&e.x.ventas.fecha)||"";return f>hoyYmd()?f:""};
 function rtFila(e){
   const x=e.x,v=x.ventas||{},vc=verConta(),pa=puedeAutorizar(),pm=puedeMarcar(),vm=rtMontos(),hoy=hoyYmd(),esp=rtDesde(e);
@@ -7642,10 +7657,10 @@ function rtFila(e){
       :e.est==="ret"?`<div class="rt-est ret">✕ ${vc?esc((e.live.find(it=>it.est==="ret").con||{}).motivo||"Retenido"):"Retenido por Contabilidad"}</div>${pa?`<div class="rt-acc"><button class="btn small primary" data-rta="ok|${esc(e.id)}">✓ Aprobar</button></div>`:""}`
       :e.est==="ok"?`<div class="rt-est ok">✓ Aprobado</div>${pa?`<button class="linkbtn note" data-rta="pend|${esc(e.id)}">quitar aprobación</button>`:""}`
       :`<div class="rt-est pend">Por aprobar</div>${pa?`<div class="rt-acc"><button class="btn small primary" data-rta="ok|${esc(e.id)}">✓ Aprobar</button><button class="btn small danger" data-rtr="${esc(e.id)}">Retener</button></div>`:""}`;
-    const cobro=pa?`<div class="aph" style="margin-top:6px">Cobro</div><div class="chips">${COBROS.map(([k,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-rtcob="${k}|${esc(e.id)}" aria-pressed="${!!cob[k]}">${t}</button>`).join("")}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><input class="rt-cmonto" data-eid="${esc(e.id)}" inputmode="numeric" placeholder="Monto a cobrar ₡" value="${cob.monto?esc(cob.monto):""}">
-        <input class="rt-cnota" data-eid="${esc(e.id)}" maxlength="160" placeholder="Indicación (ej.: pagan en efectivo)" value="${esc(cob.nota||"")}"></div>`
-      :(cobTxt.length||cob.monto||cob.nota)?`<div class="aph" style="margin-top:6px">Cobro</div><div><b>${esc(cobTxt.join(" · "))}</b>${cob.monto?` · cobrar <b>${colon(cob.monto)}</b>`:""}</div>${cob.nota?`<div>${esc(cob.nota)}</div>`:""}`:"";
+    const mA=rtMontoAuto(e);
+    const cobro=pa?`<div class="aph" style="margin-top:6px">Cobro</div>${rtMontoHtml(e)}${mA.todoCredito?"":`<div class="chips">${COBROS.map(([k,t])=>`<button type="button" class="chip" style="--c:var(--ink)" data-rtcob="${k}|${esc(e.id)}" aria-pressed="${!!cob[k]}">${t}</button>`).join("")}</div>`}
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><input class="rt-cnota" data-eid="${esc(e.id)}" maxlength="160" placeholder="Indicación (ej.: pagan en efectivo)" value="${esc(cob.nota||"")}"></div>`
+      :`<div class="aph" style="margin-top:6px">Cobro</div>${rtMontoHtml(e)}${!mA.todoCredito&&cobTxt.length?`<div><b>${esc(cobTxt.join(" · "))}</b></div>`:""}${cob.nota?`<div>${esc(cob.nota)}</div>`:""}`;
     colA=`<div class="apcell ${e.est==="ok"?"ok":e.est==="ret"?"ret":""}"><div class="aph">Contabilidad</div>${estado}${cobro}</div>`;
   }
   const det=v.nota||v.fecha?`<div class="rt-det">${esc(v.nota||"")}${v.fecha?` <span class="kc pend">Sale desde ${esc(fechaCorta(v.fecha))}</span>`:""}</div><div class="note">${esc(v.por||"")}${v.ts?" · "+fmtFecha(v.ts):""}</div>`:`<div class="note">Sin detalle.</div>`;
@@ -8354,7 +8369,7 @@ const GUIAS={
  conta:{titulo:"Ventas y Contabilidad",para:"Contabilidad",tab:"aprobar",video:V(2,"02-contabilidad"),pasos:[
   ["En la sección <b>Ruta</b> ve a cada cliente que mandó Ventas, de Perfumería y de Bodega, con el detalle del vendedor.",9.4],
   ["Si el pedido puede salir, toque <b>Aprobar</b>. Sin su aprobación no sale en ninguna ruta.",18.5],
-  ["Debajo indique cómo se cobra: efectivo, datáfono, SINPE o transferencia, y el monto. El chofer lo ve en su ruta.",25.2],
+  ["Debajo indique cómo se cobra: efectivo, datáfono, SINPE o transferencia. El monto se llena solo con lo que dice Interakzion de las proformas que salen hoy; si es crédito, dice «no se cobra».",25.2],
   ["Si falta un pago, toque <b>Retener</b> y escoja el motivo. Puede retener solo ese pedido o todos los del cliente.",33.3],
   ["Arriba están las <b>notas fijas</b> (cobros de los viernes, garantías, clientes sin autorización). Siempre se ven.",42.3],
   ["En <b>Proformas por autorizar</b> ve todas las proformas de Interakzion, aunque Ventas no haya puesto el detalle.",51.5],
