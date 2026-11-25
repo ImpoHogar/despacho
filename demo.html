@@ -353,6 +353,79 @@ function iaRuta_(zona, dir, rutas) {
   var PROV = { '01': 'R1', '03': 'R7', '04': 'R3', '05': 'R9', '06': 'R9', '07': 'R9' };
   return ok(PROV[p] || '');
 }
+
+/* ======================= Tiempos de alisto y chequeo (desde Interakzion) =======================
+ * El agente lee la tabla «tiempoalisto» de Interakzion (inicio y fin de cada alisto y chequeo),
+ * quién alistó y quién chequeó, y las unidades y productos de cada proforma. Aquí se guarda una fila
+ * por proforma en la hoja «ia_alisto» (se actualiza si vuelve a llegar). Solo lo usa el reporte de Alisto.
+ */
+var IA_AL_COLS = ['clave', 'depto', 'proforma', 'cliente', 'alistoInicio', 'alistoFin', 'alistoMin', 'chequeoInicio', 'chequeoFin', 'chequeoMin', 'unidades', 'productos', 'alistador', 'chequeador', 'actualizado'];
+function iaAlHoja_() {
+  var ss = libro_(), h = ss.getSheetByName('ia_alisto');
+  if (!h) {
+    h = ss.insertSheet('ia_alisto');
+    h.getRange(1, 1, 1, IA_AL_COLS.length).setValues([IA_AL_COLS]);
+    h.getRange('A:F').setNumberFormat('@'); h.getRange('H:I').setNumberFormat('@'); h.getRange('M:N').setNumberFormat('@');
+    try { h.hideSheet(); } catch (e) {}
+  }
+  return h;
+}
+function iaTxt14_(s) { s = String(s || '').replace(/[^0-9]/g, ''); return s.length === 14 ? s : ''; }
+
+function apiInteraTiempos(clave, paquete) {
+  return envolver_(function () {
+    var props = PropertiesService.getScriptProperties();
+    var k = String(props.getProperty('INTERA_CLAVE') || '').trim();
+    if (!k || String(clave || '').trim() !== k) throw err_('SIN_PERMISO', 'agente');
+    if (!paquete || !Array.isArray(paquete.t)) throw err_('DATOS');
+    if (paquete.t.length > 5000) throw err_('LOTE_GRANDE');
+    // Nombres de usuarios de Interakzion (depto|código → nombre)
+    if (paquete.us && typeof paquete.us === 'object') {
+      var us = {}; try { us = JSON.parse(props.getProperty('INTERA_USU') || '{}'); } catch (e) { us = {}; }
+      Object.keys(paquete.us).slice(0, 500).forEach(function (c) { if (/^[PB]\|[0-9]{1,6}$/.test(c)) us[c] = String(paquete.us[c] || '').slice(0, 40); });
+      props.setProperty('INTERA_USU', JSON.stringify(us));
+    }
+    var filas = paquete.t.map(function (x) {
+      var d = x.d === 'P' ? 'P' : 'B', n = String(x.n || '').replace(/[^0-9]/g, '').replace(/^0+/, '');
+      if (!n) return null;
+      return [d + '|' + n, d, n, String(x.nm || '').slice(0, 80), iaTxt14_(x.ai), iaTxt14_(x.af), Math.round((Number(x.am) || 0) * 100) / 100,
+        iaTxt14_(x.ci), iaTxt14_(x.cf), Math.round((Number(x.cm) || 0) * 100) / 100, Math.round((Number(x.u) || 0) * 100) / 100, Math.round(Number(x.l) || 0),
+        String(x.ua || '').replace(/[^0-9]/g, ''), String(x.uc || '').replace(/[^0-9]/g, ''), Date.now()];
+    }).filter(function (f) { return f; });
+    if (!filas.length) return { ok: true, n: 0 };
+    var lock = bloquear_();
+    try {
+      var h = iaAlHoja_(), nf = h.getLastRow(), pos = {};
+      if (nf >= 2) h.getRange(2, 1, nf - 1, 1).getValues().forEach(function (v, i) { pos[String(v[0])] = i + 2; });
+      var nuevas = [];
+      filas.forEach(function (f) {
+        var p = pos[f[0]];
+        if (p) h.getRange(p, 1, 1, f.length).setValues([f]); else { pos[f[0]] = -1; nuevas.push(f); }
+      });
+      if (nuevas.length) h.getRange(h.getLastRow() + 1, 1, nuevas.length, IA_AL_COLS.length).setValues(nuevas);
+    } finally { lock.releaseLock(); }
+    return { ok: true, n: filas.length };
+  });
+}
+
+/** Reporte «Tiempos de Alisto»: solo administración. desde = milisegundos. */
+function apiTiemposAlisto(token, desde, actor) {
+  return envolver_(function () {
+    var ctx = contexto_(token, actor);
+    if (!tiene_(ctx, 'ajustes')) throw err_('SIN_PERMISO');
+    desde = Number(desde) || (Date.now() - 31 * 86400000);
+    var dd = Utilities.formatDate(new Date(desde), 'America/Costa_Rica', 'yyyyMMddHHmmss');
+    var us = {}; try { us = JSON.parse(PropertiesService.getScriptProperties().getProperty('INTERA_USU') || '{}'); } catch (e) { us = {}; }
+    var h = iaAlHoja_(), n = h.getLastRow(), out = [];
+    if (n >= 2) h.getRange(2, 1, n - 1, IA_AL_COLS.length).getValues().forEach(function (v) {
+      var fin = String(v[8] || v[5] || ''), ini = String(v[4] || v[7] || '');
+      if ((fin || ini) < dd) return;
+      out.push({ d: String(v[1]), n: String(v[2]), nm: String(v[3]), ai: String(v[4]), af: String(v[5]), am: Number(v[6]) || 0, ci: String(v[7]), cf: String(v[8]), cm: Number(v[9]) || 0,
+        u: Number(v[10]) || 0, l: Number(v[11]) || 0, ua: us[v[1] + '|' + v[12]] || (v[12] ? 'Usuario ' + v[12] : ''), uc: us[v[1] + '|' + v[13]] || (v[13] ? 'Usuario ' + v[13] : '') });
+    });
+    return { ok: true, p: out };
+  });
+}
 /**
  * Despacho y Rutas · Grupo IMPOHOGAR
  * Servidor en Google Apps Script. Guarda todo en la hoja de cálculo donde está instalado.
@@ -10449,6 +10522,11 @@ function openRetenidos(){
 $("#board-ret").addEventListener("click",openRetenidos);
 
  
+// Tiempo máximo de alisto + chequeo (minutos) según unidades: lo que logran 8 de cada 10 pedidos (datos de Interakzion jun–nov 2026)
+const AL_P80={P:[[10,7],[30,16],[60,27],[120,34],[250,47],[500,69],[Infinity,92]],B:[[10,10],[30,24],[60,29],[120,36],[250,49],[Infinity,66]]};
+const alMax=(d,u)=>{for(const [h,m] of AL_P80[d==="B"?"B":"P"])if((Number(u)||0)<h)return m;return 92};
+const alFecha=s=>{s=String(s||"");if(s.length!==14)return 0;return new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12),+s.slice(12,14)).getTime()};
+let repTA=null,repTAkey="";
 const REPORTES=[
   {id:"despachos",t:"Cajas despachadas",d:"Por día y por ruta"},
   {id:"alistadores",t:"Por alistador",d:"Órdenes y cajas registradas"},
@@ -10494,6 +10572,13 @@ async function actualizarReportes(force){
       repCargando=false;
     }
   }else repData={ordenes:Object.values(S.ordenes),cierres:Object.values(S.cierres)};
+  if(repSel==="tiemposAlisto"&&servidor&&gas){
+    if(force||repTAkey!==key||!repTA){
+      $("#rp-out").innerHTML=`<div class="note">Cargando tiempos de Interakzion…</div>`;
+      try{const r=await gcall("apiTiemposAlisto",gasToken,d,gasActor);repTA=(r&&r.p)||[];repTAkey=key}catch(e){repTA=null;$("#rp-out").innerHTML=`<div class="err">No se pudieron cargar los tiempos.</div>`;return}
+    }
+    repData.tiempos=repTA&&repTA.length?repTA:null;
+  }
   pintarReporte();
 }
 function calcReporte(id,D,d,h){
@@ -10510,23 +10595,24 @@ function calcReporte(id,D,d,h){
       vacio:"No salió ninguna ruta en estas fechas."};
   }
   if(id==="tiemposAlisto"){
-    // Horas que anota la herramienta desde el 25 nov 2026: inicio de alisto (iaTa), de chequeo (iaTc), lista (iaTl) y registro en Recibir.
-    const mins=ms=>ms>0?Math.round(ms/6e4):null,fm=m=>m==null?"—":(m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min");
-    const os=D.ordenes.filter(o=>inR(o.recibido||0)&&(o.iaTa||o.iaTl)).sort((a,b)=>b.recibido-a.recibido);
-    const ixA=rtIndice(),moDe=o=>Number(o.monto)||Number((ixA.ia.get((o.depto||"P")+"_"+String(o.proforma).replace(/^0+/,""))||{}).mo)||0;
-    const fila=o=>{const al=o.iaTa&&(o.iaTc||o.iaTl)?mins((o.iaTc||o.iaTl)-o.iaTa):null,ch=o.iaTc&&o.iaTl?mins(o.iaTl-o.iaTc):null,
-      em=o.iaTl?mins(o.recibido-o.iaTl):null,tot=o.iaTa?mins(o.recibido-o.iaTa):null,lim=Math.round(atLimAlisto(moDe(o))/6e4);
-      return {o,al,ch,em,tot,lim,tarde:tot!=null&&tot>lim||(em!=null&&em>45)}};
-    const F=os.map(fila),g={};
-    F.forEach(f=>{const k=f.o.alistador||"(sin nombre)";g[k]=g[k]||{n:0,al:[],ch:[],em:[],tot:[],tarde:0};const x=g[k];x.n++;["al","ch","em","tot"].forEach(c=>{if(f[c]!=null)x[c].push(f[c])});if(f.tarde)x.tarde++});
-    const prom=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
-    return {titulo:"Tiempos de Alisto por alistador",
-      kpis:[["Pedidos medidos",F.length],["Promedio total",fm(prom(F.map(f=>f.tot).filter(v=>v!=null)))],["Fuera de tiempo",F.filter(f=>f.tarde).length]],
-      resumen:{titulo:"Promedio por alistador",cols:["Alistador","Pedidos","Alisto","Chequeo","Empaque y registro","Total","Fuera de tiempo"],
-        rows:Object.entries(g).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>[k,v.n,fm(prom(v.al)),fm(prom(v.ch)),fm(prom(v.em)),fm(prom(v.tot)),v.tarde])},
-      cols:["Fecha","Proforma","Cliente","Alistador","Cajas","Alisto","Chequeo","Empaque y registro","Total","Máximo","¿A tiempo?"],
-      rows:F.map(f=>[fmtDia(f.o.recibido)+" "+new Date(f.o.recibido).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),f.o.proforma,f.o.cliente,f.o.alistador||"",f.o.bultos||0,fm(f.al),fm(f.ch),fm(f.em),fm(f.tot),fm(f.lim),f.tot==null&&f.em==null?"—":f.tarde?"No":"Sí"]),
-      vacio:"Todavía no hay pedidos medidos en estas fechas. La herramienta empezó a anotar las horas de Alisto el 25 de noviembre de 2026 a las 9:10 a. m.; se miden los pedidos que empezaron el alisto desde entonces."};
+    // Datos de Interakzion (tabla de tiempos de alisto y chequeo), que manda el agente. Máximo = lo que logran 8 de cada 10 pedidos del mismo tamaño.
+    const T=(D.tiempos||[]).map(x=>{const fin=alFecha(x.cf||x.af);return {...x,fin,tot:Math.round(((x.am||0)+(x.cm||0))*10)/10,max:alMax(x.d,x.u)}}).filter(x=>x.fin&&inR(x.fin)).sort((a,b)=>b.fin-a.fin);
+    T.forEach(x=>{x.tarde=x.tot>x.max});
+    const fm=m=>m==null||!isFinite(m)?"—":(m<60?(Math.round(m*10)/10)+" min":Math.floor(m/60)+" h "+Math.round(m%60)+" min");
+    const prom=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+    const gA={},gC={};
+    T.forEach(x=>{const k=x.ua||"(sin nombre)";const g=gA[k]=gA[k]||{n:0,u:0,am:[],tot:[],tarde:0};g.n++;g.u+=x.u||0;if(x.am)g.am.push(x.am);g.tot.push(x.tot);if(x.tarde)g.tarde++;
+      if(x.cm){const kc=x.uc||x.ua||"(sin nombre)";const c=gC[kc]=gC[kc]||{n:0,cm:[]};c.n++;c.cm.push(x.cm)}});
+    const enT=T.filter(x=>!x.tarde).length;
+    return {titulo:"Tiempos de Alisto (desde Interakzion)",
+      kpis:[["Pedidos alistados",T.length],["A tiempo",T.length?Math.round(enT*100/T.length)+" %":"—"],["Fuera de tiempo",T.length-enT],["Promedio alisto + chequeo",fm(prom(T.map(x=>x.tot)))]],
+      resumenes:[
+        {titulo:"Por alistador",cols:["Alistador","Pedidos","Unidades","Alisto promedio","Minutos por unidad","Fuera de tiempo"],
+          rows:Object.entries(gA).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,Math.round(g.u),fm(prom(g.am)),g.u?(g.am.reduce((s,v)=>s+v,0)/g.u).toFixed(2):"—",g.tarde]),bar:1},
+        {titulo:"Por chequeador",cols:["Chequeador","Pedidos","Chequeo promedio"],rows:Object.entries(gC).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,fm(prom(g.cm))])}],
+      cols:["Terminó","Proforma","Depto.","Cliente","Unidades","Productos","Alistó","Alisto","Chequeó","Chequeo","Total","Máximo","¿A tiempo?"],
+      rows:T.map(x=>[fmtDia(x.fin)+" "+new Date(x.fin).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),x.n,x.d==="P"?"Perfumería":"Bodega",x.nm||"",Math.round(x.u||0),x.l||0,x.ua||"—",fm(x.am),x.uc||"—",x.cm?fm(x.cm):"—",fm(x.tot),fm(x.max),x.tarde?"No":"Sí"]),
+      vacio:D.tiempos?"No hay alistos terminados en estas fechas.":"Todavía no llegan los tiempos de Interakzion. Llegan cuando se instala la versión 4 del agente en la computadora que lee Interakzion."};
   }
   if(id==="alistadores"){
     const os=D.ordenes.filter(o=>inR(o.recibido||0));const g={};

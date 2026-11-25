@@ -7921,6 +7921,11 @@ function openRetenidos(){
 $("#board-ret").addEventListener("click",openRetenidos);
 
  
+// Tiempo máximo de alisto + chequeo (minutos) según unidades: lo que logran 8 de cada 10 pedidos (datos de Interakzion jun–nov 2026)
+const AL_P80={P:[[10,7],[30,16],[60,27],[120,34],[250,47],[500,69],[Infinity,92]],B:[[10,10],[30,24],[60,29],[120,36],[250,49],[Infinity,66]]};
+const alMax=(d,u)=>{for(const [h,m] of AL_P80[d==="B"?"B":"P"])if((Number(u)||0)<h)return m;return 92};
+const alFecha=s=>{s=String(s||"");if(s.length!==14)return 0;return new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12),+s.slice(12,14)).getTime()};
+let repTA=null,repTAkey="";
 const REPORTES=[
   {id:"despachos",t:"Cajas despachadas",d:"Por día y por ruta"},
   {id:"alistadores",t:"Por alistador",d:"Órdenes y cajas registradas"},
@@ -7966,6 +7971,13 @@ async function actualizarReportes(force){
       repCargando=false;
     }
   }else repData={ordenes:Object.values(S.ordenes),cierres:Object.values(S.cierres)};
+  if(repSel==="tiemposAlisto"&&servidor&&gas){
+    if(force||repTAkey!==key||!repTA){
+      $("#rp-out").innerHTML=`<div class="note">Cargando tiempos de Interakzion…</div>`;
+      try{const r=await gcall("apiTiemposAlisto",gasToken,d,gasActor);repTA=(r&&r.p)||[];repTAkey=key}catch(e){repTA=null;$("#rp-out").innerHTML=`<div class="err">No se pudieron cargar los tiempos.</div>`;return}
+    }
+    repData.tiempos=repTA&&repTA.length?repTA:null;
+  }
   pintarReporte();
 }
 function calcReporte(id,D,d,h){
@@ -7982,23 +7994,24 @@ function calcReporte(id,D,d,h){
       vacio:"No salió ninguna ruta en estas fechas."};
   }
   if(id==="tiemposAlisto"){
-    // Horas que anota la herramienta desde el 25 nov 2026: inicio de alisto (iaTa), de chequeo (iaTc), lista (iaTl) y registro en Recibir.
-    const mins=ms=>ms>0?Math.round(ms/6e4):null,fm=m=>m==null?"—":(m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min");
-    const os=D.ordenes.filter(o=>inR(o.recibido||0)&&(o.iaTa||o.iaTl)).sort((a,b)=>b.recibido-a.recibido);
-    const ixA=rtIndice(),moDe=o=>Number(o.monto)||Number((ixA.ia.get((o.depto||"P")+"_"+String(o.proforma).replace(/^0+/,""))||{}).mo)||0;
-    const fila=o=>{const al=o.iaTa&&(o.iaTc||o.iaTl)?mins((o.iaTc||o.iaTl)-o.iaTa):null,ch=o.iaTc&&o.iaTl?mins(o.iaTl-o.iaTc):null,
-      em=o.iaTl?mins(o.recibido-o.iaTl):null,tot=o.iaTa?mins(o.recibido-o.iaTa):null,lim=Math.round(atLimAlisto(moDe(o))/6e4);
-      return {o,al,ch,em,tot,lim,tarde:tot!=null&&tot>lim||(em!=null&&em>45)}};
-    const F=os.map(fila),g={};
-    F.forEach(f=>{const k=f.o.alistador||"(sin nombre)";g[k]=g[k]||{n:0,al:[],ch:[],em:[],tot:[],tarde:0};const x=g[k];x.n++;["al","ch","em","tot"].forEach(c=>{if(f[c]!=null)x[c].push(f[c])});if(f.tarde)x.tarde++});
-    const prom=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
-    return {titulo:"Tiempos de Alisto por alistador",
-      kpis:[["Pedidos medidos",F.length],["Promedio total",fm(prom(F.map(f=>f.tot).filter(v=>v!=null)))],["Fuera de tiempo",F.filter(f=>f.tarde).length]],
-      resumen:{titulo:"Promedio por alistador",cols:["Alistador","Pedidos","Alisto","Chequeo","Empaque y registro","Total","Fuera de tiempo"],
-        rows:Object.entries(g).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>[k,v.n,fm(prom(v.al)),fm(prom(v.ch)),fm(prom(v.em)),fm(prom(v.tot)),v.tarde])},
-      cols:["Fecha","Proforma","Cliente","Alistador","Cajas","Alisto","Chequeo","Empaque y registro","Total","Máximo","¿A tiempo?"],
-      rows:F.map(f=>[fmtDia(f.o.recibido)+" "+new Date(f.o.recibido).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),f.o.proforma,f.o.cliente,f.o.alistador||"",f.o.bultos||0,fm(f.al),fm(f.ch),fm(f.em),fm(f.tot),fm(f.lim),f.tot==null&&f.em==null?"—":f.tarde?"No":"Sí"]),
-      vacio:"Todavía no hay pedidos medidos en estas fechas. La herramienta empezó a anotar las horas de Alisto el 25 de noviembre de 2026 a las 9:10 a. m.; se miden los pedidos que empezaron el alisto desde entonces."};
+    // Datos de Interakzion (tabla de tiempos de alisto y chequeo), que manda el agente. Máximo = lo que logran 8 de cada 10 pedidos del mismo tamaño.
+    const T=(D.tiempos||[]).map(x=>{const fin=alFecha(x.cf||x.af);return {...x,fin,tot:Math.round(((x.am||0)+(x.cm||0))*10)/10,max:alMax(x.d,x.u)}}).filter(x=>x.fin&&inR(x.fin)).sort((a,b)=>b.fin-a.fin);
+    T.forEach(x=>{x.tarde=x.tot>x.max});
+    const fm=m=>m==null||!isFinite(m)?"—":(m<60?(Math.round(m*10)/10)+" min":Math.floor(m/60)+" h "+Math.round(m%60)+" min");
+    const prom=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+    const gA={},gC={};
+    T.forEach(x=>{const k=x.ua||"(sin nombre)";const g=gA[k]=gA[k]||{n:0,u:0,am:[],tot:[],tarde:0};g.n++;g.u+=x.u||0;if(x.am)g.am.push(x.am);g.tot.push(x.tot);if(x.tarde)g.tarde++;
+      if(x.cm){const kc=x.uc||x.ua||"(sin nombre)";const c=gC[kc]=gC[kc]||{n:0,cm:[]};c.n++;c.cm.push(x.cm)}});
+    const enT=T.filter(x=>!x.tarde).length;
+    return {titulo:"Tiempos de Alisto (desde Interakzion)",
+      kpis:[["Pedidos alistados",T.length],["A tiempo",T.length?Math.round(enT*100/T.length)+" %":"—"],["Fuera de tiempo",T.length-enT],["Promedio alisto + chequeo",fm(prom(T.map(x=>x.tot)))]],
+      resumenes:[
+        {titulo:"Por alistador",cols:["Alistador","Pedidos","Unidades","Alisto promedio","Minutos por unidad","Fuera de tiempo"],
+          rows:Object.entries(gA).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,Math.round(g.u),fm(prom(g.am)),g.u?(g.am.reduce((s,v)=>s+v,0)/g.u).toFixed(2):"—",g.tarde]),bar:1},
+        {titulo:"Por chequeador",cols:["Chequeador","Pedidos","Chequeo promedio"],rows:Object.entries(gC).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>[k,g.n,fm(prom(g.cm))])}],
+      cols:["Terminó","Proforma","Depto.","Cliente","Unidades","Productos","Alistó","Alisto","Chequeó","Chequeo","Total","Máximo","¿A tiempo?"],
+      rows:T.map(x=>[fmtDia(x.fin)+" "+new Date(x.fin).toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"}),x.n,x.d==="P"?"Perfumería":"Bodega",x.nm||"",Math.round(x.u||0),x.l||0,x.ua||"—",fm(x.am),x.uc||"—",x.cm?fm(x.cm):"—",fm(x.tot),fm(x.max),x.tarde?"No":"Sí"]),
+      vacio:D.tiempos?"No hay alistos terminados en estas fechas.":"Todavía no llegan los tiempos de Interakzion. Llegan cuando se instala la versión 4 del agente en la computadora que lee Interakzion."};
   }
   if(id==="alistadores"){
     const os=D.ordenes.filter(o=>inR(o.recibido||0));const g={};
