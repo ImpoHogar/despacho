@@ -11003,6 +11003,12 @@ if(tab==="estacion"&&!gas)fetch("/api/latido",{method:"POST"}).catch(()=>{});
    contando alisto, chequeo, empaque y registro. «Por alistar» no tiene límite. */
 const AT_MIN=6e4,AT_H=36e5;
 const AT_LIM={lista:45*AT_MIN,ventas:4*AT_H,conta:2*AT_H,ruta:24*AT_H,salida:AT_H,calle:10*AT_H};
+// Horario de trabajo (Luis, 25 nov 2026): lunes a viernes 7:00–17:00, sábado 7:00–12:00, domingo no.
+// El reloj de atrasos solo cuenta dentro de ese horario (las horas extra y la noche no cuentan).
+const AT_HOR=[null,[7,17],[7,17],[7,17],[7,17],[7,17],[7,12]];
+function atHab(a,b){if(!a||b<=a)return 0;let t=0;const d=new Date(a);d.setHours(0,0,0,0);
+  for(let k=0;k<400&&d.getTime()<b;k++){const h=AT_HOR[d.getDay()];if(h){const i=d.getTime()+h[0]*36e5,f=d.getTime()+h[1]*36e5;t+=Math.max(0,Math.min(f,b)-Math.max(i,a))}d.setDate(d.getDate()+1)}
+  return t}
 const atLimAlisto=mo=>Math.round((10+80*Math.min(1,Math.max(0,(Number(mo)||0)/15e6)))*AT_MIN);
 const atDur=ms=>{ms=Math.max(0,ms);const m=Math.round(ms/AT_MIN);if(m<60)return m+" min";const h=Math.floor(m/60),r=m%60;if(h<24)return h+" h"+(r?" "+r+" min":"");const d=Math.floor(h/24);return d+" día"+(d==1?"":"s")+(h%24?" "+(h%24)+" h":"")};
 const atCreada=x=>{const f=String(x.f||""),h=String(x.h||"00:00:00");if(f.length!==8)return 0;return new Date(+f.slice(0,4),+f.slice(4,6)-1,+f.slice(6,8),+h.slice(0,2)||0,+h.slice(3,5)||0).getTime()};
@@ -11038,7 +11044,7 @@ function atascos(){
       else if(ven)et.push({id:"conta",t:"Por aprobar",quien:"Contabilidad",desde:ven.ts||0,lim:AT_LIM.conta});
       else et.push({id:"ventas",t:"Sin detalle de Ventas",quien:x.d==="P"?"Ventas Perfumería":"Ventas Bodega",desde:creada,lim:AT_LIM.ventas});
     }
-    for(const s of et){const lleva=s.desde?ahora-s.desde:0;out.push({...base,...s,lleva,tarde:!!(s.lim&&s.desde&&lleva>s.lim),sabe:!!s.desde})}
+    for(const s of et){const lleva=s.desde?atHab(s.desde,ahora):0;out.push({...base,...s,lleva,tarde:!!(s.lim&&s.desde&&lleva>s.lim),sabe:!!s.desde})}
   }
   return out;
 }
@@ -11053,7 +11059,7 @@ function renderAtascos(){
   const fila=z=>`<tr class="${z.tarde?"mal":""}"><td class="mono"><b>${esc(z.n)}</b> <span class="kc ${z.dep==="P"?"pend":"mut"}">${z.dep==="P"?"Perf.":"Bod."}</span></td><td>${esc(z.cli)}</td><td>${esc(z.t)}</td>
     <td>${z.sabe?`<b>${atDur(z.lleva)}</b>`:`<span class="note">sin hora todavía</span>`}</td><td class="note">${z.lim?atDur(z.lim):"—"}</td><td>${esc(z.quien)}</td></tr>`;
   box.hidden=false;
-  box.innerHTML=`<div class="panel at-box"><div class="at-hd"><div><h3 style="margin:0">Pedidos atascados</h3><div class="note">Cada pedido pendiente, en qué paso está, cuánto lleva ahí y quién lo tiene. En rojo, los que pasaron el tiempo máximo. «Sin hora todavía»: la herramienta empezó a anotar las horas de Alisto el 25 de noviembre a las 9:10 a. m. Solo lo ve administración.</div></div>
+  box.innerHTML=`<div class="panel at-box"><div class="at-hd"><div><h3 style="margin:0">Pedidos atascados</h3><div class="note">Cada pedido pendiente, en qué paso está, cuánto lleva ahí y quién lo tiene. El tiempo cuenta solo en horario de trabajo (lunes a viernes de 7 a 5, sábado de 7 a 12). En rojo, los que pasaron el tiempo máximo. «Sin hora todavía»: la herramienta empezó a anotar las horas de Alisto el 25 de noviembre a las 9:10 a. m. Solo lo ve administración.</div></div>
     <button type="button" class="btn small" data-at-todos>${atVerTodos?"Ver solo atrasados":"Ver todos los pendientes"}</button></div>
     <div class="at-grid">${cnt}</div>
     ${lista.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Proforma</th><th>Cliente</th><th>Paso</th><th>Lleva</th><th>Máximo</th><th>Lo tiene</th></tr></thead><tbody>${lista.slice(0,80).map(fila).join("")}</tbody></table></div>`
