@@ -112,13 +112,14 @@ function calcular() {
     const enRelleno = rack == null ? null : Math.max(0, rack - diaria * F.hastaActual);
     const necesidad = diaria * (F.entreRellenos + (cfg.margenDias || 0));
     // se rellena hasta el stock máximo, en cajas completas (para que quepa)
-    const espacio = rack == null ? 0 : Math.floor((max - enRelleno) / caja) * caja;
+    const paso = esTarima(a) ? caja / 2 : caja;   // Maxell: de media tarima en media tarima
+    const espacio = rack == null ? 0 : Math.floor((max - enRelleno) / paso) * paso;
     const traer = Math.min(espacio, fuera);
     const noCabe = max > 0 && necesidad > max;   // aun lleno no alcanza hasta el siguiente relleno
     let estado = 'ok';
     if (!a.activo) estado = 'pendiente';
     else if (!s || rack == null) estado = 'sindatos';
-    else if (enRelleno >= necesidad || espacio < caja) estado = 'ok';
+    else if (enRelleno >= necesidad || espacio < paso) estado = 'ok';
     else if (fuera <= 0) estado = 'sin';
     else if (alcanza < F.hastaActual + 1) estado = 'urgente';
     else estado = 'rellenar';
@@ -130,11 +131,16 @@ function calcular() {
 const ORDEN_EST = { urgente: 0, rellenar: 1, sin: 2, ok: 3, sindatos: 4, pendiente: 5 };
 const NOMBRE_EST = { urgente: 'Urgente', rellenar: 'Rellenar', sin: 'Sin de dónde traer', ok: 'Bien', sindatos: 'Sin datos', pendiente: 'Pendiente' };
 // "50 cajas", "50 cajas + 3 unid.", "3 unid."
-function enCajas(n, caja) {
+// Maxell se maneja por TARIMAS (unid_caja = unidades por tarima); Skala por cajas de 6.
+const esTarima = a => !!a && a.marca === 'Maxell';
+const nomU = a => esTarima(a) ? ['tarima', 'tarimas'] : ['caja', 'cajas'];
+const uniPl = a => a && a.unid_caja > 1 ? nomU(a)[1] : 'unid.';
+function enCajas(n, caja, a) {
   if (n == null || !isFinite(n)) return '—';
   n = Math.round(n);
   if (n === 0) return '0';
   if (!(caja > 1)) return fmt(n) + ' unid.';
+  if (esTarima(a)) { const x = Math.round(n / caja * 100) / 100; return fmt1(x) + (x === 1 ? ' tarima' : ' tarimas') + ' (' + fmt(n) + ' unid.)'; }
   const c = Math.floor(n / caja), r = n - c * caja;
   return (c ? fmt(c) + (c === 1 ? ' caja' : ' cajas') : '') + (c && r ? ' + ' : '') + (r || !c ? fmt(r) + ' unid.' : '');
 }
@@ -144,7 +150,7 @@ const textoAlcanza = x => x == null ? '—' : !isFinite(x) ? 'sin venta' : x > 6
 function barra(f) {
   const p = Math.max(0, Math.min(1, f.lleno || 0));
   const col = p < 0.25 ? 'var(--bad)' : p < 0.5 ? 'var(--acc)' : 'var(--ok)';
-  return `<div class="rack"><div class="rack-txt"><span>En el rack: <b>${enCajas(f.rack, f.caja)}</b> de ${enCajas(f.max, f.caja)}</span><span>${pct(f.lleno)}</span></div>
+  return `<div class="rack"><div class="rack-txt"><span>En el rack: <b>${enCajas(f.rack, f.caja, f.a)}</b> de ${enCajas(f.max, f.caja, f.a)}</span><span>${pct(f.lleno)}</span></div>
     <div class="rack-bar"><i style="width:${(p * 100).toFixed(1)}%;background:${col}"></i></div></div>`;
 }
 
@@ -178,22 +184,22 @@ function vRelleno() {
   const porTraer = activos.filter(f => f.estado === 'urgente' || f.estado === 'rellenar');
   let lista = filtroRelleno === 'todos' ? porTraer : porTraer.filter(f => f.estado === filtroRelleno);
   lista.sort((x, y) => ORDEN_EST[x.estado] - ORDEN_EST[y.estado] || (x.lleno - y.lleno) || y.traer - x.traer);
-  const totCajas = porTraer.reduce((t, f) => t + f.traer / f.caja, 0);
+  const totCajas = porTraer.filter(f => !esTarima(f.a)).reduce((t, f) => t + f.traer / f.caja, 0), totTar = porTraer.filter(f => esTarima(f.a)).reduce((t, f) => t + f.traer / f.caja, 0);
   const k = (id, cls, l, n) => `<button class="kpi ${cls} ${filtroRelleno === id ? 'act' : ''}" data-filtro="${id}"><div class="l">${l}</div><div class="v">${n}</div></button>`;
   const hoyHecho = (D.entradas || []).filter(e => diaDeHora(e.fecha) === F.hoy).reverse();
-  const pendArt = filas.filter(f => !f.a.activo && f.a.marca === 'Skala').length;
+  const pendArt = filas.filter(f => !f.a.activo && (f.a.marca === 'Skala' || /^Falta/.test(f.a.pendiente || ''))).length;
   $('#app').innerHTML = aviso + `
     <div class="panel dia"><div><div class="grande">${titulo}</div><div class="sub">${sub}</div></div></div>
     <div class="kpis">
       ${k('todos', '', 'Por rellenar', porTraer.length)}
       ${k('urgente', 'bad', 'Urgentes', porTraer.filter(f => f.estado === 'urgente').length)}
-      <div class="kpi fijo"><div class="l">Cajas a traer</div><div class="v">${fmt(totCajas)}</div></div>
+      <div class="kpi fijo"><div class="l">Cajas a traer</div><div class="v">${fmt(totCajas)}</div></div>${totTar ? `<div class="kpi fijo"><div class="l">Tarimas a traer</div><div class="v">${fmt1(totTar)}</div></div>` : ''}
     </div>
-    ${pendArt && !D.yo.soloRelleno ? `<div class="aviso info">${pendArt} artículos de Skala todavía no entran al cálculo (vea Inventario → Pendientes).</div>` : ''}
+    ${pendArt && !D.yo.soloRelleno ? `<div class="aviso info">${pendArt} artículos de Skala y Maxell todavía no entran al cálculo (vea Inventario → Pendientes).</div>` : ''}
     ${lista.length ? lista.map(tarjeta).join('') : `<div class="panel vacio">${filtroRelleno === 'todos' ? '✅ Nada que rellenar por ahora. Todo lo que tiene mercadería en la bodega 2 o en excedentes alcanza hasta el siguiente relleno.' : 'No hay urgentes.'}</div>`}
     ${hoyHecho.length ? `<div class="panel seccion hecho"><h2>Ya registrado hoy</h2>${hoyHecho.map(e => {
       const a = D.articulos.find(x => x.codigo === e.codigo) || {};
-      return `<div class="fila-h"><span>✓</span><div><b>${esc(a.descripcion || e.codigo)}</b><div class="mini">${enCajas(e.cantidad, a.unid_caja)} · ${esc(e.nombre || e.usuario)} · ${fechaHora(e.fecha).split(', ').pop()}</div></div></div>`;
+      return `<div class="fila-h"><span>✓</span><div><b>${esc(a.descripcion || e.codigo)}</b><div class="mini">${enCajas(e.cantidad, a.unid_caja, a)} · ${esc(e.nombre || e.usuario)} · ${fechaHora(e.fecha).split(', ').pop()}</div></div></div>`;
     }).join('')}</div>` : ''}`;
 }
 
@@ -204,24 +210,24 @@ function tarjeta(f) {
     .sort((x, y) => (x.estado === 'pendiente') - (y.estado === 'pendiente') || claveVence(x.vence).localeCompare(claveVence(y.vence)) || x.cantidad - y.cantidad);
   const lineaLote = (l, i) => `<div class="fuente">
       <div class="d">${l.tipo === 'excedente' ? '<b>Excedente</b> · ' + esc(l.ubicacion || '') : (l.estado === 'pendiente' ? '<b>Ingreso sin ubicar</b>' : '<b>' + esc(l.tarima || 'Tarima') + '</b> · ' + esc(l.ubicacion || 'sin ubicación'))}
-        <small>Hay ${enCajas(l.cantidad, f.caja)}${l.vence ? ' · vence ' + esc(l.vence) : ''}${i === 0 && l.tipo !== 'excedente' && fuentesB2.length > 1 ? ' · <b>sacar de aquí primero</b>' : ''}</small></div>
+        <small>Hay ${enCajas(l.cantidad, f.caja, f.a)}${l.vence ? ' · vence ' + esc(l.vence) : ''}${i === 0 && l.tipo !== 'excedente' && fuentesB2.length > 1 ? ' · <b>sacar de aquí primero</b>' : ''}</small></div>
       ${D.yo.mueve ? `<button class="btn pri" data-traer="${l.id}" data-sug="${f.traer}">${l.tipo === 'excedente' ? 'Bajé de aquí' : 'Traje de aquí'}</button>` : ''}
     </div>`;
   // tarimas de la bodega 2 que hacen falta para completar lo que hay que traer (sale primero lo que vence primero)
   let nB2 = 0;
   for (let acum = fuentesEx.reduce((t, l) => t + l.cantidad, 0); nB2 < fuentesB2.length && (acum < f.traer || nB2 === 0); nB2++) acum += fuentesB2[nB2].cantidad;
   let msg = '';
-  if (f.traer < f.espacio) msg += `<div class="mini nota">Solo hay ${enCajas(f.fuera, f.caja)} fuera de la principal; traiga eso.</div>`;
+  if (f.traer < f.espacio) msg += `<div class="mini nota">Solo hay ${enCajas(f.fuera, f.caja, f.a)} fuera de la principal; traiga eso.</div>`;
   if (f.noCabe) msg += `<div class="mini nota">Aun lleno, el rack no alcanza hasta el siguiente relleno: revíselo a media semana.</div>`;
   if (fuentesEx.length && fuentesB2.length) msg += `<div class="mini nota">Hay en excedentes y en la bodega 2: usted decide de dónde le conviene más.</div>`;
   return `<div class="tarjeta ${f.estado}">
     <div class="t1">
       <div class="nom" ${D.yo.soloRelleno ? '' : `data-art="${esc(a.codigo)}" style="cursor:pointer"`}>${esc(a.descripcion)} <span class="tag ${f.estado}">${NOMBRE_EST[f.estado]}</span>
         <small>Ubicación principal: <b>${esc(f.estante || '—')}</b> · ${esc(a.codigo)}</small></div>
-      <div class="traer"><span>Traer</span><b>${enCajas(f.traer, f.caja)}</b><span>${fmt(f.traer)} unidades</span></div>
+      <div class="traer"><span>Traer</span><b>${enCajas(f.traer, f.caja, f.a)}</b><span>${fmt(f.traer)} unidades</span></div>
     </div>
     ${barra(f)}
-    <div class="mini">Alcanza ${textoAlcanza(f.alcanza)} · se venden unas ${cajasNum(f.diaria * 7, f.caja)} ${f.caja > 1 ? 'cajas' : 'unid.'} por semana</div>
+    <div class="mini">Alcanza ${textoAlcanza(f.alcanza)} · se venden unas ${cajasNum(f.diaria * 7, f.caja, f.a)} ${uniPl(f.a)} por semana</div>
     ${msg}
     <div class="fuentes"><div class="lbl">De dónde traerlo</div>${fuentesEx.map(l => lineaLote(l, -1)).join('')}${fuentesB2.slice(0, nB2).map(lineaLote).join('')}
       ${fuentesB2.length > nB2 ? `<details class="mas"><summary>Otras ${fuentesB2.length - nB2} tarimas en la bodega 2</summary>${fuentesB2.slice(nB2).map((l, i) => lineaLote(l, i + nB2)).join('')}</details>` : ''}</div>
@@ -237,12 +243,12 @@ function vInventario() {
   const fila = f => `<tr class="clic" data-art="${esc(f.a.codigo)}">
       <td>${esc(f.a.descripcion)}<div class="mini">${esc(f.a.codigo)} · ${esc(f.estante || '—')}</div></td>
       <td><span class="tag ${f.estado}">${NOMBRE_EST[f.estado]}</span></td>
-      <td class="num">${f.rack == null ? '—' : cajasNum(f.rack, f.caja)}</td><td class="num">${f.max ? cajasNum(f.max, f.caja) : '—'}</td><td class="num">${pct(f.lleno)}</td>
-      <td class="num">${cajasNum(f.b2, f.caja)}</td><td class="num">${cajasNum(f.ex, f.caja)}</td>
-      <td class="num">${cajasNum(f.diaria * 7, f.caja)}</td><td class="num">${f.alcanza == null || !isFinite(f.alcanza) ? '—' : f.alcanza > 60 ? '+60' : fmt1(f.alcanza)}</td></tr>`;
+      <td class="num">${f.rack == null ? '—' : cajasNum(f.rack, f.caja, f.a)}</td><td class="num">${f.max ? cajasNum(f.max, f.caja, f.a) : '—'}</td><td class="num">${pct(f.lleno)}</td>
+      <td class="num">${cajasNum(f.b2, f.caja, f.a)}</td><td class="num">${cajasNum(f.ex, f.caja, f.a)}</td>
+      <td class="num">${cajasNum(f.diaria * 7, f.caja, f.a)}</td><td class="num">${f.alcanza == null || !isFinite(f.alcanza) ? '—' : f.alcanza > 60 ? '+60' : fmt1(f.alcanza)}</td></tr>`;
   const filaM = f => `<div class="fila-m" data-art="${esc(f.a.codigo)}"><div class="a">${esc(f.a.descripcion)} <span class="tag ${f.estado}">${NOMBRE_EST[f.estado]}</span></div>
       ${f.a.activo && f.rack != null ? barra(f) : `<div class="mini">${esc(f.a.pendiente || '')}</div>`}
-      <div class="b"><span>Bodega 2 <b>${enCajas(f.b2, f.caja)}</b></span><span>Exced. <b>${enCajas(f.ex, f.caja)}</b></span>${f.a.activo ? `<span>Alcanza <b>${textoAlcanza(f.alcanza)}</b></span>` : ''}</div></div>`;
+      <div class="b"><span>Bodega 2 <b>${enCajas(f.b2, f.caja, f.a)}</b></span><span>Exced. <b>${enCajas(f.ex, f.caja, f.a)}</b></span>${f.a.activo ? `<span>Alcanza <b>${textoAlcanza(f.alcanza)}</b></span>` : ''}</div></div>`;
   const tabla = (arr, t, cols) => !arr.length ? '' : `<div class="panel" style="margin-bottom:14px"><div style="padding:10px 12px;font-weight:700">${t} <span class="gris">(${arr.length})</span></div>
     <div class="tabla-wrap resp"><table><thead><tr><th>Artículo</th><th>Estado</th><th class="num">En el rack</th><th class="num">Máximo</th><th class="num">Lleno</th><th class="num">Bodega 2</th><th class="num">Excedentes</th><th class="num">Venta/semana</th><th class="num">Alcanza (días)</th></tr></thead>
     <tbody>${arr.map(cols).join('')}</tbody></table></div><div class="lista-movil">${arr.map(filaM).join('')}</div></div>`;
@@ -334,16 +340,16 @@ async function abrirArticulo(codigo) {
   const partida = a.base_fecha ? (a.base_ts && a.base_ts.startsWith(D.maximosTs || '¬') ? 'lleno según el Excel de stock máximo' : 'último ajuste') : '';
   $('#capa').innerHTML = `<div class="velo" id="velo"><div class="hoja">
     <button class="cerrar" data-cerrar>✕</button>
-    <h2>${esc(a.descripcion)}</h2><div class="sub">${esc(a.codigo)} · ${esc(a.marca)} · Ubicación principal: <b>${esc(f.estante || '—')}</b> · ${f.caja} unid. por caja</div>
+    <h2>${esc(a.descripcion)}</h2><div class="sub">${esc(a.codigo)} · ${esc(a.marca)} · Ubicación principal: <b>${esc(f.estante || '—')}</b> · ${fmt(f.caja)} unid. por ${nomU(f.a)[0]}</div>
     ${!a.activo ? `<div class="aviso warn">Pendiente: ${esc(a.pendiente || 'no entra al cálculo todavía')}</div>` : ''}
     ${f.rack != null ? barra(f) : ''}
     <div class="grid2">
-      <div class="dato dest"><span>Traer en el relleno</span><b>${f.estado === 'urgente' || f.estado === 'rellenar' ? enCajas(f.traer, f.caja) : 'Nada'}</b></div>
+      <div class="dato dest"><span>Traer en el relleno</span><b>${f.estado === 'urgente' || f.estado === 'rellenar' ? enCajas(f.traer, f.caja, f.a) : 'Nada'}</b></div>
       <div class="dato"><span>Alcanza</span><b>${textoAlcanza(f.alcanza)}</b></div>
-      <div class="dato"><span>Bodega 2</span><b>${enCajas(f.b2, f.caja)}</b></div>
-      <div class="dato"><span>Excedentes</span><b>${enCajas(f.ex, f.caja)}</b></div>
-      <div class="dato"><span>Venta reciente (${D.config.ventanaCorta} días)</span><b>${cajasNum(f.corta * 7, f.caja)} ${f.caja > 1 ? 'cajas' : 'unid.'}/semana</b></div>
-      <div class="dato"><span>Promedio (${D.config.ventanaLarga} días)</span><b>${cajasNum(f.larga * 7, f.caja)} ${f.caja > 1 ? 'cajas' : 'unid.'}/semana</b></div>
+      <div class="dato"><span>Bodega 2</span><b>${enCajas(f.b2, f.caja, f.a)}</b></div>
+      <div class="dato"><span>Excedentes</span><b>${enCajas(f.ex, f.caja, f.a)}</b></div>
+      <div class="dato"><span>Venta reciente (${D.config.ventanaCorta} días)</span><b>${cajasNum(f.corta * 7, f.caja, f.a)} ${uniPl(f.a)}/semana</b></div>
+      <div class="dato"><span>Promedio (${D.config.ventanaLarga} días)</span><b>${cajasNum(f.larga * 7, f.caja, f.a)} ${uniPl(f.a)}/semana</b></div>
     </div>
     ${R ? `<h3>Cómo se calcula lo que hay en el rack</h3>
       <div class="cuenta">
@@ -357,7 +363,7 @@ async function abrirArticulo(codigo) {
     <div class="mini" style="margin-top:8px">Existencia total en Interakzion: ${fmt(f.total)} (bodega general ${fmt(s.g)}${(D.config.bodegasQueSuman || []).map(b => ' + ' + esc(D.config.nombresBodegas[b] || 'bodega ' + b) + ' ' + fmt((s.b || {})[b] || 0)).join('')})${otras.length ? ' · no cuentan: ' + otras.map(([b, n]) => 'bodega ' + b + ': ' + fmt(n)).join(', ') : ''}</div>
     <h3>Tarimas y excedentes</h3>
     ${lotes.length ? lotes.map(l => `<div class="fuente">
-        <div class="q">${enCajas(l.cantidad, f.caja)}</div>
+        <div class="q">${enCajas(l.cantidad, f.caja, f.a)}</div>
         <div class="d"><b>${l.tipo === 'excedente' ? 'Excedente' : esc(l.tarima || (l.estado === 'pendiente' ? 'Ingreso sin ubicar' : 'Tarima'))}</b> · ${esc(l.ubicacion || 'sin ubicación')}
           <small>${l.vence ? 'Vence ' + esc(l.vence) + ' · ' : ''}${esc(l.nota || '')}</small></div>
         ${D.yo.admin ? `<button class="btn peq" data-editlote="${l.id}">Corregir</button>${l.cantidad > 0 ? `<button class="btn peq pri" data-traer="${l.id}" data-sug="${f.traer}">Traje de aquí</button>` : ''}` : ''}
@@ -378,15 +384,15 @@ function modalRack(codigo, lleno) {
     try { await api('/articulo/' + encodeURIComponent(codigo) + '/rack', { method: 'POST', body: { cantidad: cant } }); if (m) m.remove(); toast('Rack actualizado'); await cargar(); abrirArticulo(codigo); }
     catch (e) { if (m) m.querySelector('#rErr').textContent = e.message; else toast(e.message); }
   };
-  if (lleno) { if (confirm(`¿La ubicación principal de ${a.descripcion} está llena (${enCajas(a.maximo, caja)})?`)) enviar(a.maximo); return; }
-  const m = modal(`<h3>¿Cuánto hay en el rack?</h3><div class="sub">${esc(a.descripcion)}<br>Stock máximo: ${enCajas(a.maximo, caja)}</div>
-    <div class="dos"><div class="campo"><label>Cajas completas</label><input id="rC" type="number" min="0" inputmode="numeric"></div>
+  if (lleno) { if (confirm(`¿La ubicación principal de ${a.descripcion} está llena (${enCajas(a.maximo, caja, a)})?`)) enviar(a.maximo); return; }
+  const m = modal(`<h3>¿Cuánto hay en el rack?</h3><div class="sub">${esc(a.descripcion)}<br>Stock máximo: ${enCajas(a.maximo, caja, a)}</div>
+    <div class="dos"><div class="campo"><label>${esTarima(a) ? 'Tarimas (puede poner 0.5)' : 'Cajas completas'}</label><input id="rC" type="number" min="0" ${esTarima(a) ? 'step="0.5" inputmode="decimal"' : 'inputmode="numeric"'}></div>
       <div class="campo"><label>Unidades sueltas</label><input id="rU" type="number" min="0" inputmode="numeric" value="0"></div></div>
     <div class="mini">Desde ahora la herramienta sigue contando con lo que se traiga y lo que se venda.</div>
     <div class="err" id="rErr"></div>
     <div class="acciones"><button class="btn" data-cancelar>Cancelar</button><button class="btn ok" id="rOk">Guardar</button></div>`);
   m.querySelector('#rC').focus();
-  m.querySelector('#rOk').onclick = () => enviar((+m.querySelector('#rC').value || 0) * caja + (+m.querySelector('#rU').value || 0), m);
+  m.querySelector('#rOk').onclick = () => enviar(Math.round((+m.querySelector('#rC').value || 0) * caja) + (+m.querySelector('#rU').value || 0), m);
 }
 
 // ===================== modales =====================
@@ -397,8 +403,8 @@ function modalTraslado(loteId, sugerido) {
   const a = D.articulos.find(x => x.codigo === l.codigo) || {}; const caja = a.unid_caja || 1;
   const pre = Math.min(l.cantidad, sugerido > 0 ? sugerido : l.cantidad);
   const m = modal(`<h3>${l.tipo === 'excedente' ? 'Bajar de excedentes' : 'Traer de la bodega 2'}</h3>
-    <div class="sub">${esc(a.descripcion)}<br>${l.tipo === 'excedente' ? 'Excedente ' : (esc(l.tarima || 'Tarima') + ' · ')}${esc(l.ubicacion || '')} — hay ${enCajas(l.cantidad, caja)}${sugerido > 0 ? '<br>Para llenar el rack faltan <b>' + enCajas(sugerido, caja) + '</b>' : ''}</div>
-    ${caja > 1 ? `<div class="dos"><div class="campo"><label>Cajas que trae (de ${caja})</label><input id="mCajas" type="number" min="0" inputmode="numeric" value="${pre % caja === 0 ? pre / caja : ''}"></div>
+    <div class="sub">${esc(a.descripcion)}<br>${l.tipo === 'excedente' ? 'Excedente ' : (esc(l.tarima || 'Tarima') + ' · ')}${esc(l.ubicacion || '')} — hay ${enCajas(l.cantidad, caja, a)}${sugerido > 0 ? '<br>Para llenar el rack faltan <b>' + enCajas(sugerido, caja, a) + '</b>' : ''}</div>
+    ${caja > 1 ? `<div class="dos"><div class="campo"><label>${esTarima(a) ? `Tarimas que trae (de ${fmt(caja)} unid.)` : `Cajas que trae (de ${caja})`}</label><input id="mCajas" type="number" min="0" ${esTarima(a) ? 'step="0.5" inputmode="decimal"' : 'inputmode="numeric"'} value="${esTarima(a) ? Math.round(pre / caja * 100) / 100 : pre % caja === 0 ? pre / caja : ''}"></div>
       <div class="campo"><label>Unidades en total</label><input id="mUnid" type="number" min="1" inputmode="numeric" value="${pre}"></div></div>`
       : `<div class="campo"><label>Unidades</label><input id="mUnid" type="number" min="1" inputmode="numeric" value="${pre}"></div>`}
     <div class="dos"><div class="campo"><label>¿Quién lo trae?</label><select id="mQuien">${(D.personas || []).map(p => `<option value="${esc(p.usuario)}" ${p.usuario.toLowerCase() === D.yo.usuario.toLowerCase() ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
@@ -408,14 +414,14 @@ function modalTraslado(loteId, sugerido) {
     <div class="err" id="mErr"></div>
     <div class="acciones"><button class="btn" data-cancelar>Cancelar</button><button class="btn ok" id="mOk">Registrar</button></div>`);
   const cj = m.querySelector('#mCajas'), un = m.querySelector('#mUnid');
-  if (cj) { cj.oninput = () => { if (cj.value !== '') un.value = (+cj.value) * caja; }; un.oninput = () => { cj.value = (+un.value) % caja === 0 ? (+un.value) / caja : ''; }; }
+  if (cj) { cj.oninput = () => { if (cj.value !== '') un.value = Math.round((+cj.value) * caja); }; un.oninput = () => { cj.value = esTarima(a) ? Math.round((+un.value) / caja * 100) / 100 : (+un.value) % caja === 0 ? (+un.value) / caja : ''; }; }
   (cj || un).focus(); (cj || un).select();
   m.querySelector('#mOk').onclick = async () => {
     const b = m.querySelector('#mOk'); b.disabled = true;
     try {
       if (!m.querySelector('#mClave').value) { m.querySelector('#mErr').textContent = 'Escriba su contraseña para confirmar'; b.disabled = false; return; }
       await api('/traslado', { method: 'POST', body: { lote_id: l.id, cantidad: +un.value, nota: m.querySelector('#mNota').value, quien: m.querySelector('#mQuien').value, clave: m.querySelector('#mClave').value } });
-      m.remove(); toast('Registrado: ' + enCajas(+un.value, caja) + ' · ' + a.descripcion); await cargar(); if ($('#velo')) abrirArticulo(l.codigo);
+      m.remove(); toast('Registrado: ' + enCajas(+un.value, caja, a) + ' · ' + a.descripcion); await cargar(); if ($('#velo')) abrirArticulo(l.codigo);
     } catch (e) { m.querySelector('#mErr').textContent = e.message; b.disabled = false; }
   };
 }
