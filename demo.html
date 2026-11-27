@@ -11147,6 +11147,8 @@ function renderResumenDia(){
     ${R.noCuadran.length?`<div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Ruta</th><th>Chofer</th><th>Diferencia</th><th>Cerró</th></tr></thead><tbody>
       ${R.noCuadran.map(x=>`<tr class="mal"><td><b>${esc(x.ruta)}</b></td><td>${esc(x.chofer)}</td><td><b>${vm?(x.dif<0?"Faltante ":"Sobrante ")+colon(Math.abs(x.dif)):(x.dif<0?"Faltante":"Sobrante")}</b></td><td>${esc(x.por)}</td></tr>`).join("")}</tbody></table></div>`
       :`<div class="note">${R.liq.length?(R.liq.length==1?"La ruta que cerró con Contabilidad cuadró.":`Las ${R.liq.length} rutas que cerraron con Contabilidad cuadraron.`):"Ninguna ruta cerró con Contabilidad todavía."}</div>`}
+    ${(()=>{const pe=R.liq.filter(x=>x.falta>=1||x.noEnt>0);return pe.length?`<div class="note" style="margin-top:8px"><b style="color:var(--warn)">La caja cuadró, pero quedó algo pendiente:</b></div><div style="overflow-x:auto"><table class="at-tab"><thead><tr><th>Ruta</th><th>Chofer</th><th>Sin cobrar</th><th>No entregados</th></tr></thead><tbody>
+      ${pe.map(x=>`<tr><td><b>${esc(x.ruta)}</b></td><td>${esc(x.chofer)}</td><td>${x.falta>=1?(vm?colon(x.falta):"Sí"):"—"}</td><td>${x.noEnt||"—"}</td></tr>`).join("")}</tbody></table></div>`:""})()}
     ${R.sinCerrar.length?`<div class="note" style="margin-top:8px"><b style="color:var(--warn)">Salieron y todavía no cierran con el chofer:</b> ${R.sinCerrar.map(c=>esc(c.rutaNombre||"")+(c.ruteroNombre?" ("+esc(c.ruteroNombre)+")":"")).join(", ")}</div>`:""}`;
   // 4. Quién no usó la herramienta
   let uso="";const U=R.uso;
