@@ -11233,11 +11233,13 @@ const GUIAS={
   ["Aquí está todo lo que se hizo en la herramienta: quién, cuándo y qué cambió.",19.7],
   ["Filtre por fecha, persona o tipo, o busque una proforma o cliente."],
   ["Toque <b>Descargar Excel</b> para guardarlo."]]},
- inventario:{titulo:"Inventario de racks",para:"Bodega",tab:"inventario",pasos:[
-  ["Busque el artículo por nombre o código."],
-  ["Vea cuánto hay en el rack y cuánto falta para llenarlo."],
-  ["Para rellenar, toque <b>Bajar de excedentes</b> o <b>Traer de la bodega 2</b> y anote lo que movió."],
-  ["Lo que registró queda abajo en <b>Ya registrado hoy</b>."]]},
+ inventario:{titulo:"Inventario: relleno de racks",para:"Bodega (Esteban, Jimmy, Awerson, Brayan)",tab:"inventario",pasos:[
+  ["Arriba dice si hoy es día de relleno (miércoles y sábado) o cuántos días faltan."],
+  ["Cada tarjeta es un artículo que hay que rellenar. <b>Urgente</b> (rojo): se acaba antes del día de relleno, tráigalo ya. <b>Rellenar</b>: tráigalo el día de relleno."],
+  ["En grande dice cuánto <b>traer</b>. Skala va en <b>cajas</b> de 6; las baterías Maxell van en <b>tarimas</b> (de media en media)."],
+  ["Abajo, en <b>De dónde traerlo</b>, sale la tarima de la bodega 2 (o el excedente) de donde sacarlo. Saque primero lo que vence primero."],
+  ["Cuando lo traiga, toque <b>Traje de aquí</b> (o <b>Bajé de aquí</b>), ponga cuánto trajo, escoja quién lo trajo y ponga su clave."],
+  ["Lo que registró queda en <b>Ya registrado hoy</b>. Si no lo registra, la herramienta cree que el rack sigue vacío."]]},
  gps:{titulo:"GPS",para:"Logística y Gerencia",tab:"gps",pasos:[
   ["<b>En vivo</b>: los carros en el mapa, desde ProTrack."],
   ["<b>Recorrido y paradas</b>: escoja el carro y la fecha para ver por dónde anduvo y dónde paró."],
@@ -11299,6 +11301,12 @@ const FAQ={
   ["«Camión salió» está gris","Falta que el chofer cuente las cajas y cierre la carga. Cuando lo haga, se activa solo."],
   ["La factura no aparece","Llega sola de Interakzion un minuto después de facturar. Si no llega, revise si arriba dice que Interakzion no se ha actualizado y avísele a Luis Emilio."],
   ["Un cliente viene a retirar","Búsquelo abajo, en los clientes que retiran en bodega: cobre, anote quién retira y pida la firma."]],
+ inventario:[
+  ["Traje mercadería pero se me olvidó registrarla","Regístrela apenas se acuerde, con la cantidad real y su clave. Si no, la herramienta cree que el rack está más vacío y vuelve a pedir que lo rellene."],
+  ["Traje más o menos de lo que decía la tarjeta","Ponga lo que de verdad trajo. La tarjeta es una sugerencia: lo que cuenta es lo que usted registra."],
+  ["La tarjeta no coincide con lo que hay en el rack","Avísele a Luis Emilio: él corrige el conteo del rack desde el artículo y la herramienta sigue contando desde ahí."],
+  ["Un artículo está agotado y no sale en la lista","Es normal: solo se avisa lo que tiene de dónde traerse (bodega 2 o excedentes). Cuando vuelva a entrar mercadería, aparece solo."],
+  ["Llegó mercadería nueva a la bodega 2","Los ingresos de Interakzion se suman solos a la bodega 2 como «Ingreso sin ubicar». Anote en qué tarima y ubicación quedó."]],
  hoy:[
   ["El Resumen del día muestra ayer","Antes de las 5 p.m. abre en el día hábil anterior. Toque <b>Hoy</b> para ver cómo va el día."],
   ["Hay pedidos atascados","Cada uno dice en qué paso está, cuánto lleva y quién lo tiene: llame a esa persona."],
