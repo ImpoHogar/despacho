@@ -23,6 +23,7 @@
 #ayuda li .ay-ver{border:0;background:none;color:#2563eb;font-weight:700;cursor:pointer;padding:0 0 0 6px;font-size:14px;white-space:nowrap}
 #ayuda .ay-nota{margin:12px 24px 0;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:10px 14px;font-size:15px}
 #ayuda .ay-otras{margin:14px 24px 0;font-size:14px;color:#475569}
+#ayuda .ay-faq{margin:14px 24px 0}#ayuda .ay-faq h4{margin:0 0 6px;font-size:17px}#ayuda .ay-faq details{border:1px solid #e2e8f0;border-radius:10px;margin:6px 0;background:#f8fafc}#ayuda .ay-faq summary{cursor:pointer;padding:10px 14px;font-weight:600;font-size:15px}#ayuda .ay-faq details>div{padding:0 14px 12px;font-size:15px;line-height:1.45}
 #ayuda .ay-otras button{border:1px solid #93c5fd;background:#eff6ff;color:#1e3a8a;border-radius:999px;padding:6px 12px;margin:4px 6px 0 0;cursor:pointer;font-size:14px}
 #ayuda .ay-otras button.on{background:#2563eb;color:#fff;border-color:#2563eb}
 #ayuda .ay-pie{display:flex;gap:12px;justify-content:flex-end;align-items:center;flex-wrap:wrap;padding:18px 24px 22px}
@@ -103,12 +104,70 @@ const GUIAS={
   ["<b>En vivo</b>: los carros en el mapa, desde ProTrack."],
   ["<b>Recorrido y paradas</b>: escoja el carro y la fecha para ver por dónde anduvo y dónde paró."],
   ["<b>Reporte del día</b>: el resumen de cada carro."]]},
+ practica:{titulo:"Práctica guiada: un pedido de principio a fin",para:"Gerencia y administración",tab:"_practica",video:V(9,"09-practica"),pasos:[
+  ["Dixon ve en Alisto qué alistar primero."],
+  ["Lucía lo registra en Recibir: el cliente y la ruta se llenan solos, y le dice en qué estante dejarlo."],
+  ["Ventas le pone el detalle; con «Sale desde» en el futuro, Carlos no lo puede marcar para hoy."],
+  ["Contabilidad lo aprueba y dice cómo se cobra."],
+  ["Carlos cierra la ruta; Facturación recibe la factura de Interakzion y el chofer cuenta la carga."],
+  ["El chofer entrega con firma y, al volver, Contabilidad cierra la ruta con dos claves."]]},
  ajustes:{titulo:"Ajustes",para:"Administración",tab:"ajustes",pasos:[
   ["En <b>Personas, claves y permisos</b> agregue a cada persona y marque qué puede hacer. La clave es de 4 a 6 números y no se repite."],
   ["Rutas y estantes, vehículos y clientes se cargan aquí, o todo junto con <b>Carga masiva desde Excel</b>."],
   ["Lo que falta llenar sale en naranja con «Falta llenar»."]]}
 };
 GUIAS.estacion={...GUIAS.recibir,tab:"estacion"};
+
+// «¿Qué hago si…?» de cada puesto: casos reales y de las pruebas. [pregunta, respuesta]
+const FAQ={
+ chofer:[
+  ["No me deja cerrar la carga","Una cantidad de cajas no coincide con la hoja de ruta, y le dice cuál proforma revisar. Cuente otra vez esas cajas y corrija el número. Si de verdad faltan o sobran cajas, avísele a Carlos antes de salir."],
+  ["El cliente no estaba o no quiso recibir","Toque <b>Registrar entrega</b>, marque <b>No entregado</b> y escoja el motivo. Traiga el pedido de vuelta: cuando cierre con Contabilidad, regresa solo a su estante para salir otro día."],
+  ["El cliente pagó menos de lo que debía","Anote lo que de verdad le pagó. La herramienta le avisa cuánto quedó sin cobrar y Contabilidad lo ve. No complete con plata suya."],
+  ["El cliente no pagó nada","En el cobro toque <b>No pagó</b>. Queda pendiente y Contabilidad le da seguimiento."],
+  ["El cliente paga con dos formas (SINPE y efectivo, por ejemplo)","Toque <b>+ Otra forma de pago</b> y anote cada una con su monto. En SINPE, datáfono o transferencia escriba el número de comprobante."],
+  ["Me pide la foto del recibo","En los pedidos de contado, tómele la foto al recibo ahí mismo, donde el cliente: queda guardada la hora y el lugar. Después entregue el original en Contabilidad."],
+  ["¿Cuánto efectivo entrego al final?","Toque <b>Terminé la ruta</b>: le dice exactamente cuánto efectivo entregar en Contabilidad. Lo pagado con SINPE, datáfono, transferencia o a crédito no se entrega en efectivo."],
+  ["No me aparece mi ruta","Solo ve las rutas en las que Carlos lo escogió como chofer. Pídale a Carlos que revise a quién le asignó la ruta."]],
+ recibir:[
+  ["No me deja registrar","Revise que marcó <b>timbrado</b> o <b>no timbrado</b> (es obligatorio), que puso las cajas y que digitó su clave."],
+  ["Dice que la proforma ya está registrada","Alguien ya la registró, y le dice en qué estante está. No la registre otra vez."],
+  ["El cliente no se llena solo","Revise el número de la proforma. Si está bien y es nueva, espere un minuto: los datos de Interakzion llegan solos cada minuto."],
+  ["Me dice que la clave no es correcta","Escríbala otra vez con calma. Si no la recuerda, pídale a Luis Emilio que le asigne una nueva."],
+  ["Me equivoqué en las cajas o en el timbrado","Avísele a Carlos de inmediato, antes de que la ruta salga."]],
+ alisto:[
+  ["Arriba dice «Interakzion sin actualizar»","La computadora que manda los datos de Interakzion no se ha comunicado. Avísele a Luis Emilio. Mientras tanto la lista puede estar atrasada."],
+  ["Ya se alistó una proforma y sigue en la lista","Sale sola cuando en Interakzion pasa a «En Alisto». Revise que allá le hayan cambiado el estado."]],
+ ventas:[
+  ["No encuentro al cliente o la proforma","Búsquelo por nombre, número de cliente o número de proforma. Si la proforma es recién hecha, espere un minuto. Usted solo ve los clientes de su departamento (Perfumería o Bodega)."],
+  ["El cliente cambió el día de entrega","Toque <b>Editar detalle o proformas</b> y cambie «Sale desde». Con una fecha futura, Logística no lo puede sacar antes."],
+  ["El cliente agregó otra proforma","Toque <b>Editar detalle o proformas</b> y márquela."],
+  ["Un pedido regresó sin entregar","Llame al cliente, acuerden el nuevo día y actualice el detalle con <b>Editar detalle o proformas</b>."]],
+ conta:[
+  ["El monto a cobrar no sale","El monto lo pone Interakzion solo. Si sale vacío, esa proforma todavía no tiene monto en Interakzion: revise allá y espere un minuto."],
+  ["Dice «Crédito: no se cobra»","El cliente o la factura son de crédito: el chofer no cobra nada."],
+  ["Un cliente debe plata","Toque <b>Retener</b>: puede detener solo ese pedido o todos los del cliente hasta liberarlo. Mientras esté retenido, en Rutas pasa a la columna «Pendientes» y no puede salir."],
+  ["Al cerrar con el chofer no me deja","Lea el aviso: si hay diferencia de dinero, explíquela; si una factura no se entregó, ponga el motivo. El chofer y Contabilidad deben ser personas distintas."],
+  ["La caja cuadró pero el cliente quedó debiendo","Es normal: la ruta cuadra si el chofer entregó todo lo que cobró. Lo que quedó sin cobrar aparece en el Resumen del día para darle seguimiento."]],
+ rutaLog:[
+  ["La casilla tiene un candado 🔒","Ventas puso que sale desde otro día. Si el cliente lo quiere hoy, pídale a Ventas que cambie la fecha."],
+  ["No veo un pedido en la lista","Aquí solo sale lo que Contabilidad ya aprobó. Si falta, pregúntele a Contabilidad."]],
+ rutas:[
+  ["No me deja cerrar la ruta","Revise si hay una tarjeta <b>oscura con candado</b> (falta registrarla en Recibir) o un pedido sin la aprobación de Contabilidad (sin C✓). Hasta resolverlo, la ruta no se cierra."],
+  ["Un pedido desapareció de su ruta","Si Contabilidad lo retuvo, pasa a la primera columna, <b>Pendientes</b>. Cuando lo liberen, vuelve solo a su ruta."],
+  ["Volvió un pedido con la marca DEVUELTO","No se entregó y la tarjeta dice el motivo. Ya está facturado y aprobado: sale en la próxima ruta cuando Ventas confirme el día."],
+  ["El cliente viene a recoger","Mueva la tarjeta a la columna <b>Entrega en bodega</b>. Facturación se la entrega y cobra."]],
+ facturar:[
+  ["«Camión salió» está gris","Falta que el chofer cuente las cajas y cierre la carga. Cuando lo haga, se activa solo."],
+  ["La factura no aparece","Llega sola de Interakzion un minuto después de facturar. Si no llega, revise si arriba dice que Interakzion no se ha actualizado y avísele a Luis Emilio."],
+  ["Un cliente viene a retirar","Búsquelo abajo, en los clientes que retiran en bodega: cobre, anote quién retira y pida la firma."]],
+ hoy:[
+  ["El Resumen del día muestra ayer","Antes de las 5 p.m. abre en el día hábil anterior. Toque <b>Hoy</b> para ver cómo va el día."],
+  ["Hay pedidos atascados","Cada uno dice en qué paso está, cuánto lleva y quién lo tiene: llame a esa persona."],
+  ["Dice «Interakzion sin actualizar»","La computadora del agente no está mandando datos. Revise que esté encendida y con internet."]]
+};
+FAQ.estacion=FAQ.recibir;
+const faqHtml=g=>{const l=FAQ[g]||[];return l.length?`<div class="ay-faq"><h4>¿Qué hago si…?</h4>${l.map(([q,a])=>`<details><summary>${q}</summary><div>${a}</div></details>`).join("")}</div>`:""};
 const esAdm=()=>yo("ajustes");
 function guiaDe(t){
   if(t==="contab")t="aprobar";
@@ -140,11 +199,12 @@ function abrir(g){
   const nota=typeof G.nota==="function"?G.nota():G.nota;
   const el=document.getElementById("ayuda");
   el.innerHTML=`<div class="ay-box">
-   <div class="ay-hd"><div class="ay-k">¿Cómo se usa? ${G.video?"· video "+G.video.n+" de 8":""}</div><h2 id="ay-tit">${G.titulo}</h2><div class="ay-para">Para: ${G.para}${sesion?` · ${esc(sesion.nombre)}`:""}</div></div>
+   <div class="ay-hd"><div class="ay-k">¿Cómo se usa? ${G.video?"· video "+G.video.n:""}</div><h2 id="ay-tit">${G.titulo}</h2><div class="ay-para">Para: ${G.para}${sesion?` · ${esc(sesion.nombre)}`:""}</div></div>
    <div class="ay-cuerpo">
     <div>${G.video?`<video id="ay-vid" controls playsinline preload="none" poster="${G.video.poster}" src="${G.video.src}"></video>`:`<div class="ay-sinvideo">Esta pantalla todavía no tiene video. Siga los pasos de la derecha.</div>`}</div>
     <ol>${G.pasos.map(p=>`<li><div>${p[0]}${G.video&&p[1]!=null?` <button type="button" class="ay-ver" data-ayt="${p[1]}">▶ ver</button>`:""}</div></li>`).join("")}</ol>
    </div>
+   ${faqHtml(g)}
    ${nota?`<div class="ay-nota">${nota}</div>`:""}
    ${otras.length?`<div class="ay-otras">${esAdm()?"Guías de los otros puestos:":"Usted también usa:"}<br>${otras.map(x=>`<button type="button" data-ayg="${x}">${GUIAS[x].titulo}</button>`).join("")}</div>`:""}
    <div class="ay-pie"><div class="note">Puede volver a verla cuando quiera con el botón «?».</div>
