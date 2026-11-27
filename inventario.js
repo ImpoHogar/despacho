@@ -209,7 +209,7 @@ function tarjeta(f) {
   const fuentesB2 = f.lotes.filter(l => l.tipo === 'bodega2' && l.cantidad > 0)
     .sort((x, y) => (x.estado === 'pendiente') - (y.estado === 'pendiente') || claveVence(x.vence).localeCompare(claveVence(y.vence)) || x.cantidad - y.cantidad);
   const lineaLote = (l, i) => `<div class="fuente">
-      <div class="d">${l.tipo === 'excedente' ? '<b>Excedente</b> · ' + esc(l.ubicacion || '') : (l.estado === 'pendiente' ? '<b>Ingreso sin ubicar</b>' : '<b>' + esc(l.tarima || 'Tarima') + '</b> · ' + esc(l.ubicacion || 'sin ubicación'))}
+      <div class="d">${l.tipo === 'excedente' ? '<b>Excedente</b> · ' + esc(l.ubicacion || '') : (l.estado === 'pendiente' ? '<b>Ingreso sin ubicar</b>' : '<b>' + esc(l.tarima || 'Tarima') + '</b>' + (l.ubicacion ? ' · ' + esc(l.ubicacion) : l.tarima === 'Bodega 2' ? '' : ' · sin ubicación'))}
         <small>Hay ${enCajas(l.cantidad, f.caja, f.a)}${l.vence ? ' · vence ' + esc(l.vence) : ''}${i === 0 && l.tipo !== 'excedente' && fuentesB2.length > 1 ? ' · <b>sacar de aquí primero</b>' : ''}</small></div>
       ${D.yo.mueve ? `<button class="btn pri" data-traer="${l.id}" data-sug="${f.traer}">${l.tipo === 'excedente' ? 'Bajé de aquí' : 'Traje de aquí'}</button>` : ''}
     </div>`;
@@ -224,13 +224,13 @@ function tarjeta(f) {
     <div class="t1">
       <div class="nom" ${D.yo.soloRelleno ? '' : `data-art="${esc(a.codigo)}" style="cursor:pointer"`}>${esc(a.descripcion)} <span class="tag ${f.estado}">${NOMBRE_EST[f.estado]}</span>
         <small>Ubicación principal: <b>${esc(f.estante || '—')}</b> · ${esc(a.codigo)}</small></div>
-      <div class="traer"><span>Traer</span><b>${enCajas(f.traer, f.caja, f.a)}</b><span>${fmt(f.traer)} unidades</span></div>
+      <div class="traer"><span>Traer</span><b>${esTarima(a) ? fmt1(Math.round(f.traer / f.caja * 100) / 100) + (f.traer === f.caja ? ' tarima' : ' tarimas') : enCajas(f.traer, f.caja, f.a)}</b><span>${fmt(f.traer)} unidades</span></div>
     </div>
     ${barra(f)}
     <div class="mini">Alcanza ${textoAlcanza(f.alcanza)} · se venden unas ${cajasNum(f.diaria * 7, f.caja, f.a)} ${uniPl(f.a)} por semana</div>
     ${msg}
     <div class="fuentes"><div class="lbl">De dónde traerlo</div>${fuentesEx.map(l => lineaLote(l, -1)).join('')}${fuentesB2.slice(0, nB2).map(lineaLote).join('')}
-      ${fuentesB2.length > nB2 ? `<details class="mas"><summary>Otras ${fuentesB2.length - nB2} tarimas en la bodega 2</summary>${fuentesB2.slice(nB2).map((l, i) => lineaLote(l, i + nB2)).join('')}</details>` : ''}</div>
+      ${fuentesB2.length > nB2 ? `<details class="mas"><summary>${fuentesB2.length - nB2 === 1 ? 'Otra tarima' : 'Otras ' + (fuentesB2.length - nB2) + ' tarimas'} en la bodega 2</summary>${fuentesB2.slice(nB2).map((l, i) => lineaLote(l, i + nB2)).join('')}</details>` : ''}</div>
   </div>`;
 }
 
